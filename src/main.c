@@ -29,8 +29,10 @@
 
 #include "dfu.h"
 #include "usb_dfu.h"
+#include "sam7dfu.h"
 //#include "config.h"
 
+/* FIXME: how do we learn about PAGE_SIZE in userspace? */
 
 int debug;
 static int verbose = 0;
@@ -253,14 +255,15 @@ static void help(void)
 {
 	printf("Usage: dfu-util [options] ...\n"
 		"  -h --help\t\t\tPrint this help message\n"
-		"  -V --version\t\tPrint the version number\n"
-		"  -l --list\t\tList the currently attached DFU capable USB devices\n"
+		"  -V --version\t\t\tPrint the version number\n"
+		"  -l --list\t\t\tList the currently attached DFU capable USB devices\n"
 		"  -d --device vendor:product\tSpecify Vendor/Product ID of DFU device\n"
 		"  -c --cfg config_nr\t\tSpecify the Configuration of DFU device\n"
 		"  -i --intf intf_nr\t\tSpecify the DFU Interface number\n"
 		"  -a --alt alt_nr\t\tSpecify the Altseting of the DFU Interface\n"
-		"  -U --upload file\tRead firmware from device into <file>\n"
-		"  -D --download file\tWrite firmware from <file> into device\n"
+		"  -t --transfer-size\tSpecify the number of bytes per USB Transfer\n"
+		"  -U --upload file\t\tRead firmware from device into <file>\n"
+		"  -D --download file\t\tWrite firmware from <file> into device\n"
 		);
 }
 
@@ -276,6 +279,7 @@ static struct option opts[] = {
 	{ "intf", 1, 0, 'i' },
 	{ "altsetting", 1, 0, 'a' },
 	{ "alt", 1, 0, 'a' },
+	{ "transfer-size", 1, 0, 't' },
 	{ "upload", 1, 0, 'U' },
 	{ "download", 1, 0, 'D' },
 };
@@ -292,10 +296,11 @@ int main(int argc, char **argv)
 	struct dfu_if _rt_dif, _dif, *dif = &_dif;
 	int num_devs;
 	int num_ifs;
+	unsigned int transfer_size = 0;
 	enum mode mode = MODE_NONE;
 	struct dfu_status status;
 	struct usb_dfu_func_descriptor func_dfu;
-	char *filename;
+	char *filename = NULL;
 	
 	printf("dfu-util - (C) 2007 by OpenMoko Inc.\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
@@ -309,7 +314,7 @@ int main(int argc, char **argv)
 
 	while (1) {
 		int c, option_index = 0;
-		c = getopt_long(argc, argv, "hVvld:c:i:a:UD", opts, &option_index);
+		c = getopt_long(argc, argv, "hVvld:c:i:a:t:U:D:", opts, &option_index);
 		if (c == -1)
 			break;
 
@@ -353,6 +358,9 @@ int main(int argc, char **argv)
 			dif->altsetting = atoi(optarg);
 			dif->flags |= DFU_IFF_ALT;
 			break;
+		case 't':
+			transfer_size = atoi(optarg);
+			break;
 		case 'U':
 			mode = MODE_UPLOAD;
 			filename = optarg;
@@ -369,6 +377,12 @@ int main(int argc, char **argv)
 
 	if (mode == MODE_NONE) {
 		fprintf(stderr, "You need to specify one of -D or -U\n");
+		help();
+		exit(2);
+	}
+
+	if (!filename) {
+		fprintf(stderr, "You need to specify a filename to -D -r -U\n");
 		help();
 		exit(2);
 	}
@@ -469,6 +483,8 @@ int main(int argc, char **argv)
 			       "device\n");
 			exit(1);
 		}
+		if (!get_first_dfu_device(dif))
+			exit(3);
 
 		printf("Opening USB Device...\n");
 		dif->dev_handle = usb_open(dif->dev);
@@ -482,9 +498,7 @@ int main(int argc, char **argv)
 	}
 
 already_idle:
-	printf("%p (%d)\n", dif->dev_handle, *(int *)dif->dev_handle);
 	num_ifs = count_dfu_interfaces(dif->dev);
-	printf("%p (%d)\n", dif->dev_handle, *(int *)dif->dev_handle);
 	if (num_ifs < 0) {
 		fprintf(stderr, "No DFU Interface after RESET?!?\n");
 		exit(1);
@@ -548,6 +562,7 @@ already_idle:
 	/* Obtain DFU functional descriptor */
 	{
 		int ret;
+		int page_size = getpagesize();
 		
 		ret = usb_get_descriptor(dif->dev_handle, 0x21, dif->interface,
 					 &func_dfu, sizeof(func_dfu));
@@ -556,9 +571,14 @@ already_idle:
 				usb_strerror());
 			exit(1);
 		}
+		/* FIXME: Endian! */
+		if (!transfer_size)
+			transfer_size = func_dfu.wTransferSize;
 
-		printf("wTransferSize = 0x%04x\n", func_dfu.wTransferSize);
-			
+		printf("Transfer Size = 0x%04x\n", transfer_size);
+
+		if (func_dfu.wTransferSize > page_size)
+			func_dfu.wTransferSize = page_size;
 	}
 	
 	if (DFU_STATUS_OK != status.bStatus ) {
@@ -574,10 +594,12 @@ already_idle:
 
 	switch (mode) {
 	case MODE_UPLOAD:
-		//sam7dfu_do_upload(usb_handle, interface, func_dfu.wTransferSize, filename);
+		sam7dfu_do_upload(dif->dev_handle, dif->interface,
+				  transfer_size, filename);
 		break;
 	case MODE_DOWNLOAD:
-		//sam7dfu_do_dnload(usb_handle, interface, func_dfu.wTransferSize, filename);
+		sam7dfu_do_dnload(dif->dev_handle, dif->interface,
+				  transfer_size, filename);
 		break;
 	default:
 		fprintf(stderr, "Unsupported mode: %u\n", mode);
