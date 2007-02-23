@@ -33,10 +33,9 @@
 
 
 int debug;
-
 static int verbose = 0;
 
-#define DFU_INTF_FLAG_DFU	0x0001	/* DFU Mode, (not Runtime) */
+#define DFU_IFF_DFU		0x0001	/* DFU Mode, (not Runtime) */
 #define DFU_IFF_VENDOR		0x0100
 #define DFU_IFF_PRODUCT		0x0200
 #define DFU_IFF_CONFIG		0x0400
@@ -54,16 +53,17 @@ struct dfu_if {
 	u_int8_t configuration;
 	u_int8_t interface;
 	u_int8_t altsetting;
-	u_int8_t flags;
-
+	unsigned int flags;
 	struct usb_device *dev;
+
 	struct usb_dev_handle *dev_handle;
 };
 
-static int _assign_first_cb(struct dfu_if *dif, void *v)
+static int _get_first_cb(struct dfu_if *dif, void *v)
 {
-	struct dfu_if **v_dif = v;
-	*v_dif = dif;
+	struct dfu_if *v_dif = v;
+
+	memcpy(v_dif, dif, sizeof(*v_dif)-sizeof(struct usb_dev_handle *));
 
 	/* return a value that makes find_dfu_if return immediately */
 	return 1;
@@ -78,6 +78,8 @@ static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, v
 	struct dfu_if _dif, *dfu_if = &_dif;
 	int cfg_idx, intf_idx, alt_idx;
 	int rc;
+
+	memset(dfu_if, 0, sizeof(*dfu_if));
 	
 	for (cfg_idx = 0; cfg_idx < dev->descriptor.bNumConfigurations;
 	     cfg_idx++) {
@@ -96,14 +98,16 @@ static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, v
 					dfu_if->product =
 						dev->descriptor.idProduct;
 					dfu_if->configuration = cfg_idx;
-					dfu_if->interface = intf_idx;
+					dfu_if->interface = 
+						intf->bInterfaceNumber;
 					dfu_if->altsetting = 
 						intf->bAlternateSetting;
 					if (intf->bInterfaceProtocol == 2)
-						dfu_if->flags = 
-							DFU_INTF_FLAG_DFU;
+						dfu_if->flags |= 
+							DFU_IFF_DFU;
 					else
-						dfu_if->flags = 0;
+						dfu_if->flags &=
+							~DFU_IFF_DFU;
 					if (!handler)
 						return 1;
 					rc = handler(dfu_if, v);
@@ -117,15 +121,28 @@ static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, v
 	return 0;
 }
 
+static int get_first_dfu_if(struct dfu_if *dif)
+{
+	return find_dfu_if(dif->dev, &_get_first_cb, (void *) dif);
+}
+
+#define MAX_STR_LEN 64
+
 static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 {
 	struct usb_device *dev = dfu_if->dev;
+	int if_name_str_idx;
+	char name[MAX_STR_LEN+1] = "UNDEFINED";
 
-	printf("Found DFU %s: [0x%04x:0x%04x] devnum=%u, cfg=%u, intf=%u, alt=%u\n", 
-	       dfu_if->flags & DFU_INTF_FLAG_DFU ? "DFU" : "Runtime",
+	if_name_str_idx = dev->config[dfu_if->configuration].interface[dfu_if->interface].altsetting[dfu_if->altsetting].iInterface;
+	if (if_name_str_idx && dfu_if->dev_handle)
+		usb_get_string_simple(dfu_if->dev_handle, if_name_str_idx, name, MAX_STR_LEN);
+
+	printf("Found DFU %s: [0x%04x:0x%04x] devnum=%u, cfg=%u, intf=%u, alt=%u, name=%s\n", 
+	       dfu_if->flags & DFU_IFF_DFU ? "DFU" : "Runtime",
 	       dev->descriptor.idVendor, dev->descriptor.idProduct,
 	       dev->devnum, dfu_if->configuration, dfu_if->interface,
-	       dfu_if->altsetting);
+	       dfu_if->altsetting, name);
 
 	return 0;
 }
@@ -149,6 +166,30 @@ static int count_dfu_interfaces(struct usb_device *dev)
 	return num_found;
 }
 
+/* Find the first DFU-capable device, save it in dfu_if->dev */
+static int get_first_dfu_device(struct dfu_if *dif)
+{
+	struct usb_bus *usb_bus;
+	struct usb_device *dev;
+
+	for (usb_bus = usb_get_busses(); NULL != usb_bus;
+	     usb_bus = usb_bus->next) {
+		for (dev = usb_bus->devices; NULL != dev; dev = dev->next) {
+			if (!dif || 
+			    (dif->flags & (DFU_IFF_VENDOR|DFU_IFF_PRODUCT)) == 0 ||
+			    (dev->descriptor.idVendor == dif->vendor &&
+			     dev->descriptor.idProduct == dif->product)) {
+			     	if (count_dfu_interfaces(dev) >= 1) {
+					dif->dev = dev;
+					return 1;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
 /* Count DFU capable devices within system */
 static int count_dfu_devices(struct dfu_if *dif)
 {
@@ -161,10 +202,9 @@ static int count_dfu_devices(struct dfu_if *dif)
 	     usb_bus = usb_bus->next) {
 		for (dev = usb_bus->devices; NULL != dev; dev = dev->next) {
 			if (!dif || 
-			    (dif->flags & (DFU_IFF_VENDOR|DFU_IFF_PRODUCT) == 0) ||
+			    (dif->flags & (DFU_IFF_VENDOR|DFU_IFF_PRODUCT)) == 0 ||
 			    (dev->descriptor.idVendor == dif->vendor &&
 			     dev->descriptor.idProduct == dif->product)) {
-				dif->dev = dev;
 				if (count_dfu_interfaces(dev) >= 1)
 					num_found++;
 			}
@@ -185,6 +225,7 @@ static int list_dfu_interfaces(void)
 			find_dfu_if(dev, &print_dfu_if, NULL);
 		}
 	}
+	return 0;
 }
 
 static int parse_vendprod(struct usb_vendprod *vp, const char *str)
@@ -248,12 +289,13 @@ enum mode {
 int main(int argc, char **argv)
 {
 	struct usb_vendprod vendprod;
-	struct dfu_if _dif, *dif = &_dif;
+	struct dfu_if _rt_dif, _dif, *dif = &_dif;
 	int num_devs;
 	int num_ifs;
-	enum mode mode;
+	enum mode mode = MODE_NONE;
 	struct dfu_status status;
 	struct usb_dfu_func_descriptor func_dfu;
+	char *filename;
 	
 	printf("dfu-util - (C) 2007 by OpenMoko Inc.\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
@@ -261,6 +303,7 @@ int main(int argc, char **argv)
 	memset(dif, 0, sizeof(*dif));
 
 	usb_init();
+	//usb_set_debug(255);
 	usb_find_busses();
 	usb_find_devices();
 
@@ -312,15 +355,25 @@ int main(int argc, char **argv)
 			break;
 		case 'U':
 			mode = MODE_UPLOAD;
+			filename = optarg;
 			break;
 		case 'D':
 			mode = MODE_DOWNLOAD;
+			filename = optarg;
 			break;
 		default:
 			help();
 			exit(2);
 		}
 	}
+
+	if (mode == MODE_NONE) {
+		fprintf(stderr, "You need to specify one of -D or -U\n");
+		help();
+		exit(2);
+	}
+
+	dfu_init(5000);
 
 	num_devs = count_dfu_devices(dif);
 	if (num_devs == 0) {
@@ -336,42 +389,126 @@ int main(int argc, char **argv)
 		       "device\n");
 		exit(3);
 	}
+	if (!get_first_dfu_device(dif))
+		exit(3);
+
 	/* We have exactly one device. It's usb_device is now in dif->dev */
 
-	if (mode == MODE_NONE) {
-		fprintf(stderr, "You need to specify one of -D or -U\n");
-		help();
-		exit(2);
-	}
-
-	/* FIXME: check if there's only one interface/altsetting and use it */
-	if (!dif->flags & (DFU_IFF_CONFIG|DFU_IFF_ALT) != DFU_IFF_CONFIG|DFU_IFF_ALT) {
-		fprintf(stderr, "You have to specify --cfg and --alt!\n");
-		help();
-		exit(1);
-	}
-
-retry:
-	/* FIXME: need to re-scan and re-select same device after reset*/
-	if (find_dfu_if(dif->dev, NULL, NULL) != 1) {
-		fprintf(stderr, "Can't find device anymore !?!\n");
-		exit(1);
-	}
-
-	printf("Opening USB Device...\n");
+	printf("Opening USB Device 0x%04x:0x%04x...\n", dif->vendor, dif->product);
 	dif->dev_handle = usb_open(dif->dev);
 	if (!dif->dev_handle) {
 		fprintf(stderr, "Cannot open device: %s\n", usb_strerror());
 		exit(1);
 	}
 
+	/* try to find first DFU interface of device */
+	memcpy(&_rt_dif, dif, sizeof(_rt_dif));
+	if (!get_first_dfu_if(&_rt_dif))
+		exit(1);
+
+	print_dfu_if(&_rt_dif, NULL);
+
+	if (!_rt_dif.flags & DFU_IFF_DFU) {
+		/* In the 'first round' during runtime mode, there can only be one
+	 	* DFU Interface descriptor according to the DFU Spec. */
+
+		/* FIXME: check if the selected device really has only one */
+
+		printf("Claiming USB DFU Runtime Interface...\n");
+		if (usb_claim_interface(_rt_dif.dev_handle, _rt_dif.interface) < 0) {
+			fprintf(stderr, "Cannot claim interface: %s\n", usb_strerror());
+			exit(1);
+		}
+
+		printf("Determining device status: ");
+		if (dfu_get_status(_rt_dif.dev_handle, _rt_dif.interface, &status ) < 0) {
+			fprintf(stderr, "error get_status: %s\n", usb_strerror());
+			exit(1);
+		}
+		printf("state = %s, status = %d\n", dfu_state_to_string(status.bState), status.bStatus);
+
+		switch (status.bState) {
+		case STATE_APP_IDLE:
+			printf("Device really in Runtime Mode, send DFU detach request...\n");
+			if (dfu_detach(_rt_dif.dev_handle, _rt_dif.interface, 1000) < 0) {
+				fprintf(stderr, "error detaching: %s\n", usb_strerror());
+				exit(1);
+				break;
+			}
+			printf("Resetting USB...\n");
+			if (usb_reset(_rt_dif.dev_handle) < 0) {
+				fprintf(stderr, "error resetting after detach: %s\n", usb_strerror());
+			}
+			sleep(2);
+			break;
+		case STATE_DFU_ERROR:
+			printf("dfuERROR, clearing status\n");
+			if (dfu_clear_status(_rt_dif.dev_handle, _rt_dif.interface) < 0) {
+				fprintf(stderr, "error clear_status: %s\n", usb_strerror());
+				exit(1);
+				break;
+			}
+			break;
+		case STATE_DFU_IDLE:
+			printf("Device already in dfuIDLE ?!?, continuing\n");
+			goto already_idle;
+			break;
+		}
+
+		/* now we need to re-scan the bus and locate our device */
+		if (usb_find_devices() < 2)
+			printf("not at least 2 device changes found ?!?\n");
+
+		num_devs = count_dfu_devices(dif);
+		if (num_devs == 0) {
+			fprintf(stderr, "Lost device after RESET?\n");
+			exit(1);
+		} else if (num_devs > 1) {
+			fprintf(stderr, "More than one DFU capable USB device found, "
+			       "you might try `--list' and then disconnect all but one "
+			       "device\n");
+			exit(1);
+		}
+
+		printf("Opening USB Device...\n");
+		dif->dev_handle = usb_open(dif->dev);
+		if (!dif->dev_handle) {
+			fprintf(stderr, "Cannot open device: %s\n", usb_strerror());
+			exit(1);
+		}
+	} else {
+		/* we're already in DFU mode, so we can skip the detach/reset
+		 * procedure */
+	}
+
+already_idle:
+	printf("%p (%d)\n", dif->dev_handle, *(int *)dif->dev_handle);
+	num_ifs = count_dfu_interfaces(dif->dev);
+	printf("%p (%d)\n", dif->dev_handle, *(int *)dif->dev_handle);
+	if (num_ifs < 0) {
+		fprintf(stderr, "No DFU Interface after RESET?!?\n");
+		exit(1);
+	} else if (num_ifs == 1) {
+		if (!get_first_dfu_if(dif)) {
+			fprintf(stderr, "Can't find the single available DFU IF\n");
+			exit(1);
+		}
+	} else if (num_ifs > 1 && !dif->flags & (DFU_IFF_IFACE|DFU_IFF_ALT)) {
+		fprintf(stderr, "We have %u DFU Interfaces/Altsettings, "
+			"you have to specify one via --intf / --alt options\n",
+			num_ifs);
+		exit(1);
+	}
+
+#if 0
 	printf("Setting Configuration...\n");
 	if (usb_set_configuration(dif->dev_handle, dif->configuration) < 0) {
 		fprintf(stderr, "Cannot set configuration: %s\n", usb_strerror());
 		exit(1);
 	}
-
-	printf("Claiming USB Interface...\n");
+#endif
+	printf("Claiming USB DFU Interface...\n");
+	printf("%p (%d)\n", dif->dev_handle, *(int *)dif->dev_handle);
 	if (usb_claim_interface(dif->dev_handle, dif->interface) < 0) {
 		fprintf(stderr, "Cannot claim interface: %s\n", usb_strerror());
 		exit(1);
@@ -389,37 +526,26 @@ retry:
 		fprintf(stderr, "error get_status: %s\n", usb_strerror());
 		exit(1);
 	}
-	printf("state = %d, status = %d\n", status.bState, status.bStatus);
+	printf("state = %s, status = %d\n", dfu_state_to_string(status.bState), status.bStatus);
 
 	switch (status.bState) {
 	case STATE_APP_IDLE:
-		printf("Device in Runtime Mode, send DFU detach request...\n");
-		if (dfu_detach(dif->dev_handle, dif->interface, 1000) < 0) {
-			fprintf(stderr, "error detaching: %s\n", usb_strerror());
-			exit(1);
-			break;
-		}
-		printf("Resetting USB...\n");
-		if (usb_reset(dif->dev_handle) < 0) {
-			fprintf(stderr, "error resetting after detach: %s\n", usb_strerror());
-		}
-		sleep(2);
-		goto retry;
+		fprintf(stderr, "Device still in Runtime Mode!\n");
+		exit(1);
 		break;
 	case STATE_DFU_ERROR:
 		printf("dfuERROR, clearing status\n");
 		if (dfu_clear_status(dif->dev_handle, dif->interface) < 0) {
 			fprintf(stderr, "error clear_status: %s\n", usb_strerror());
 			exit(1);
-			break;
 		}
-		goto retry;
 		break;
 	case STATE_DFU_IDLE:
 		printf("dfuIDLE, continuing\n");
 		break;
 	}
 
+	/* Obtain DFU functional descriptor */
 	{
 		int ret;
 		
@@ -445,13 +571,18 @@ retry:
 			exit(1);
 		}
         }
-#if 0
-	sam7dfu_do_upload(usb_handle, interface, func_dfu.wTransferSize, 
-			  "/tmp/dfu_upload.img");
-	//sam7dfu_do_dnload(usb_handle, interface, 252,
-	sam7dfu_do_dnload(usb_handle, interface, func_dfu.wTransferSize, 
-			  "/tmp/dfu_upload.img");
-#endif
+
+	switch (mode) {
+	case MODE_UPLOAD:
+		//sam7dfu_do_upload(usb_handle, interface, func_dfu.wTransferSize, filename);
+		break;
+	case MODE_DOWNLOAD:
+		//sam7dfu_do_dnload(usb_handle, interface, func_dfu.wTransferSize, filename);
+		break;
+	default:
+		fprintf(stderr, "Unsupported mode: %u\n", mode);
+		exit(1);
+	}
 
 	exit(0);
 }
