@@ -264,6 +264,7 @@ static void help(void)
 		"  -t --transfer-size\t\tSpecify the number of bytes per USB Transfer\n"
 		"  -U --upload file\t\tRead firmware from device into <file>\n"
 		"  -D --download file\t\tWrite firmware from <file> into device\n"
+		"  -R --reset\t\t\tIssue USB Reset signalling once we're finished\n"
 		);
 }
 
@@ -282,6 +283,7 @@ static struct option opts[] = {
 	{ "transfer-size", 1, 0, 't' },
 	{ "upload", 1, 0, 'U' },
 	{ "download", 1, 0, 'D' },
+	{ "reset", 1, 0, 'R' },
 };
 
 enum mode {
@@ -301,6 +303,7 @@ int main(int argc, char **argv)
 	struct dfu_status status;
 	struct usb_dfu_func_descriptor func_dfu;
 	char *filename = NULL;
+	int final_reset = 0;
 	
 	printf("dfu-util - (C) 2007 by OpenMoko Inc.\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
@@ -314,7 +317,7 @@ int main(int argc, char **argv)
 
 	while (1) {
 		int c, option_index = 0;
-		c = getopt_long(argc, argv, "hVvld:c:i:a:t:U:D:", opts, &option_index);
+		c = getopt_long(argc, argv, "hVvld:c:i:a:t:U:D:R", opts, &option_index);
 		if (c == -1)
 			break;
 
@@ -368,6 +371,9 @@ int main(int argc, char **argv)
 		case 'D':
 			mode = MODE_DOWNLOAD;
 			filename = optarg;
+			break;
+		case 'R':
+			final_reset = 1;
 			break;
 		default:
 			help();
@@ -442,7 +448,8 @@ int main(int argc, char **argv)
 		printf("state = %s, status = %d\n", dfu_state_to_string(status.bState), status.bStatus);
 
 		switch (status.bState) {
-		case STATE_APP_IDLE:
+		case DFU_STATE_appIDLE:
+		case DFU_STATE_appDETACH:
 			printf("Device really in Runtime Mode, send DFU detach request...\n");
 			if (dfu_detach(_rt_dif.dev_handle, _rt_dif.interface, 1000) < 0) {
 				fprintf(stderr, "error detaching: %s\n", usb_strerror());
@@ -455,7 +462,7 @@ int main(int argc, char **argv)
 			}
 			sleep(2);
 			break;
-		case STATE_DFU_ERROR:
+		case DFU_STATE_dfuERROR:
 			printf("dfuERROR, clearing status\n");
 			if (dfu_clear_status(_rt_dif.dev_handle, _rt_dif.interface) < 0) {
 				fprintf(stderr, "error clear_status: %s\n", usb_strerror());
@@ -463,9 +470,9 @@ int main(int argc, char **argv)
 				break;
 			}
 			break;
-		case STATE_DFU_IDLE:
-			printf("Device already in dfuIDLE ?!?, continuing\n");
-			goto already_idle;
+		default:
+			printf(stderr, "IMPOSSIBLE: Runtime device already in DFU state ?!?\n");
+			exit(1);
 			break;
 		}
 
@@ -497,7 +504,6 @@ int main(int argc, char **argv)
 		 * procedure */
 	}
 
-already_idle:
 	num_ifs = count_dfu_interfaces(dif->dev);
 	if (num_ifs < 0) {
 		fprintf(stderr, "No DFU Interface after RESET?!?\n");
@@ -522,7 +528,6 @@ already_idle:
 	}
 #endif
 	printf("Claiming USB DFU Interface...\n");
-	printf("%p (%d)\n", dif->dev_handle, *(int *)dif->dev_handle);
 	if (usb_claim_interface(dif->dev_handle, dif->interface) < 0) {
 		fprintf(stderr, "Cannot claim interface: %s\n", usb_strerror());
 		exit(1);
@@ -617,6 +622,17 @@ status_again:
 	default:
 		fprintf(stderr, "Unsupported mode: %u\n", mode);
 		exit(1);
+	}
+
+	if (final_reset) {
+		if (dfu_detach(dif->dev_handle, dif->interface, 1000) < 0) {
+			fprintf("can't detach: %s\n", usb_strerror());
+		}
+		printf("Resetting USB to swithc back to runtime mode\n");
+		if (usb_reset(dif->dev_handle) < 0) {
+			fprintf(stderr, "error resetting after download: %s\n", 
+			usb_strerror());
+		}
 	}
 
 	exit(0);

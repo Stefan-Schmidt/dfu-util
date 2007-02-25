@@ -117,19 +117,33 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 	
 	printf("] finished!\n");
 
+get_status:
 	/* Transition to MANIFEST_SYNC state */
 	ret = dfu_get_status(usb_handle, interface, &dst);
 	if (ret < 0) {
-		fprintf(stderr, "unable to transition to MANIFEST state\n");
+		fprintf(stderr, "unable to read DFU status\n");
 		goto out_close;
 	}
-		
+	printf("state(%u) = %s, status(%u) = %s\n", dst.bState, 
+		dfu_state_to_string(dst.bState), dst.bStatus,
+		dfu_status_to_string(dst.bStatus));
+
+	/* FIXME: deal correctly with ManifestationTolerant=0 / WillDetach bits */
+	switch (dst.bState) {
+	case DFU_STATE_dfuMANIFEST_SYNC:
+	case DFU_STATE_dfuMANIFEST:
+		goto get_status;
+		break;
+	case DFU_STATE_dfuIDLE:
+		break;
+	}
+#if 0
 	printf("Resetting USB...\n");
-	sleep(1);
 	if (usb_reset(usb_handle) < 0) {
 		fprintf(stderr, "error resetting after download: %s\n", 
 			usb_strerror());
 	}
+#endif
 	printf("Done!\n");
 out_close:
 	close(fd);
