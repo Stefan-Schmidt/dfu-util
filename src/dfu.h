@@ -97,5 +97,7 @@ int dfu_abort( struct usb_dev_handle *device,
 
 char* dfu_state_to_string( int state );
 
+const char *dfu_status_to_string(int status);
+
 int debug;
 #endif
