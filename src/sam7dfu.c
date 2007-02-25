@@ -130,6 +130,7 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 		fprintf(stderr, "error resetting after download: %s\n", 
 			usb_strerror());
 	}
+	printf("Done!\n");
 out_close:
 	close(fd);
 out_free:
