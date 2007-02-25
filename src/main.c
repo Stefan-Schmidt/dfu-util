@@ -261,7 +261,7 @@ static void help(void)
 		"  -c --cfg config_nr\t\tSpecify the Configuration of DFU device\n"
 		"  -i --intf intf_nr\t\tSpecify the DFU Interface number\n"
 		"  -a --alt alt_nr\t\tSpecify the Altseting of the DFU Interface\n"
-		"  -t --transfer-size\tSpecify the number of bytes per USB Transfer\n"
+		"  -t --transfer-size\t\tSpecify the number of bytes per USB Transfer\n"
 		"  -U --upload file\t\tRead firmware from device into <file>\n"
 		"  -D --download file\t\tWrite firmware from <file> into device\n"
 		);
