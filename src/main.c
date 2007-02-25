@@ -535,6 +535,7 @@ already_idle:
 		exit(1);
 	}
 
+status_again:
 	printf("Determining device status: ");
 	if (dfu_get_status(dif->dev_handle, dif->interface, &status ) < 0) {
 		fprintf(stderr, "error get_status: %s\n", usb_strerror());
@@ -543,18 +544,28 @@ already_idle:
 	printf("state = %s, status = %d\n", dfu_state_to_string(status.bState), status.bStatus);
 
 	switch (status.bState) {
-	case STATE_APP_IDLE:
+	case DFU_STATE_appIDLE:
+	case DFU_STATE_appDETACH:
 		fprintf(stderr, "Device still in Runtime Mode!\n");
 		exit(1);
 		break;
-	case STATE_DFU_ERROR:
+	case DFU_STATE_dfuERROR:
 		printf("dfuERROR, clearing status\n");
 		if (dfu_clear_status(dif->dev_handle, dif->interface) < 0) {
 			fprintf(stderr, "error clear_status: %s\n", usb_strerror());
 			exit(1);
 		}
 		break;
-	case STATE_DFU_IDLE:
+	case DFU_STATE_dfuDNLOAD_IDLE:
+	case DFU_STATE_dfuUPLOAD_IDLE:
+		printf("aborting previous incomplete transfer\n");
+		if (dfu_abort(dif->dev_handle, dif->interface) < 0) {
+			fprintf(stderr, "can't send DFU_ABORT: %s\n", usb_strerror());
+			exit(1);
+		}
+		goto status_again;
+		break;
+	case DFU_STATE_dfuIDLE:
 		printf("dfuIDLE, continuing\n");
 		break;
 	}
