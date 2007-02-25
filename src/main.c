@@ -578,8 +578,8 @@ status_again:
 		ret = usb_get_descriptor(dif->dev_handle, 0x21, dif->interface,
 					 &func_dfu, sizeof(func_dfu));
 		if (ret < 0) {
-			fprintf(stderr, "error clear_status: %s\n",
-				usb_strerror());
+			fprintf(stderr, "Error obtaining DFU functional "
+				"descriptor: %s\n", usb_strerror());
 			exit(1);
 		}
 		/* FIXME: Endian! */
@@ -593,6 +593,8 @@ status_again:
 	}
 	
 	if (DFU_STATUS_OK != status.bStatus ) {
+		printf("WARNING: DFU Status: '%s'\n",
+			dfu_status_to_string(status.bStatus));
 		/* Clear our status & try again. */
 		dfu_clear_status(dif->dev_handle, dif->interface);
 		dfu_get_status(dif->dev_handle, dif->interface, &status);
