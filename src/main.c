@@ -137,10 +137,14 @@ static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 	char name[MAX_STR_LEN+1] = "UNDEFINED";
 
 	if_name_str_idx = dev->config[dfu_if->configuration].interface[dfu_if->interface].altsetting[dfu_if->altsetting].iInterface;
-	if (if_name_str_idx && dfu_if->dev_handle)
-		usb_get_string_simple(dfu_if->dev_handle, if_name_str_idx, name, MAX_STR_LEN);
+	if (if_name_str_idx) {
+		if (!dfu_if->dev_handle)
+			dfu_if->dev_handle = usb_open(dfu_if->dev);
+		if (dfu_if->dev_handle)
+			usb_get_string_simple(dfu_if->dev_handle, if_name_str_idx, name, MAX_STR_LEN);
+	}
 
-	printf("Found DFU %s: [0x%04x:0x%04x] devnum=%u, cfg=%u, intf=%u, alt=%u, name=%s\n", 
+	printf("Found %s: [0x%04x:0x%04x] devnum=%u, cfg=%u, intf=%u, alt=%u, name=\"%s\"\n", 
 	       dfu_if->flags & DFU_IFF_DFU ? "DFU" : "Runtime",
 	       dev->descriptor.idVendor, dev->descriptor.idProduct,
 	       dev->devnum, dfu_if->configuration, dfu_if->interface,
@@ -471,7 +475,7 @@ int main(int argc, char **argv)
 			}
 			break;
 		default:
-			printf(stderr, "IMPOSSIBLE: Runtime device already in DFU state ?!?\n");
+			fprintf(stderr, "IMPOSSIBLE: Runtime device already in DFU state ?!?\n");
 			exit(1);
 			break;
 		}
@@ -627,7 +631,7 @@ status_again:
 
 	if (final_reset) {
 		if (dfu_detach(dif->dev_handle, dif->interface, 1000) < 0) {
-			fprintf("can't detach: %s\n", usb_strerror());
+			fprintf(stderr, "can't detach: %s\n", usb_strerror());
 		}
 		printf("Resetting USB to swithc back to runtime mode\n");
 		if (usb_reset(dif->dev_handle) < 0) {
