@@ -560,6 +560,7 @@ status_again:
 			fprintf(stderr, "error clear_status: %s\n", usb_strerror());
 			exit(1);
 		}
+		goto status_again;
 		break;
 	case DFU_STATE_dfuDNLOAD_IDLE:
 	case DFU_STATE_dfuUPLOAD_IDLE:
