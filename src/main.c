@@ -617,12 +617,14 @@ status_again:
 
 	switch (mode) {
 	case MODE_UPLOAD:
-		sam7dfu_do_upload(dif->dev_handle, dif->interface,
-				  transfer_size, filename);
+		if (sam7dfu_do_upload(dif->dev_handle, dif->interface,
+				  transfer_size, filename) < 0)
+			exit(1);
 		break;
 	case MODE_DOWNLOAD:
-		sam7dfu_do_dnload(dif->dev_handle, dif->interface,
-				  transfer_size, filename);
+		if (sam7dfu_do_dnload(dif->dev_handle, dif->interface,
+				  transfer_size, filename) < 0)
+			exit(1);
 		break;
 	default:
 		fprintf(stderr, "Unsupported mode: %u\n", mode);

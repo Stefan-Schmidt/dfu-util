@@ -26,6 +26,7 @@ int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface,
 
 	fd = creat(fname, 0644);
 	if (fd < 0) {
+		perror(fname);
 		ret = fd;
 		goto out_free;
 	}
@@ -74,13 +75,17 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 
 	fd = open(fname, O_RDONLY);
 	if (fd < 0) {
+		perror(fname);
 		ret = fd;
 		goto out_free;
 	}
 	
 	ret = fstat(fd, &st);
-	if (ret < 0)
+	if (ret < 0) {
+		perror(fname);
 		goto out_close;
+		perror(fname);
+	}
 
 	if (st.st_size <= 0 /* + DFU_HDR */) {
 		fprintf(stderr, "File seems a bit too small...\n");
@@ -94,8 +99,10 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 	printf("Starting download: [");
 	while (bytes_sent < st.st_size /* - DFU_HDR */) {
 		ret = read(fd, buf, xfer_size);
-		if (ret < 0)
+		if (ret < 0) {
+			perror(fname);
 			goto out_close;
+		}
 		ret = dfu_download(usb_handle, interface, ret, buf);
 		if (ret < 0)
 			goto out_close;
