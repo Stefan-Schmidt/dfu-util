@@ -18,7 +18,7 @@
 int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface, 
 		      int xfer_size, const char *fname)
 {
-	int ret, fd, total_bytes;
+	int ret, fd, total_bytes = 0;
 	char *buf = malloc(xfer_size);
 
 	if (!buf)
@@ -41,6 +41,7 @@ int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface,
 		if (write_rc < rc) {
 			fprintf(stderr, "Short write: %s\n",
 				strerror(errno));
+			ret = total_bytes;
 			goto out_close;
 		}
 		total_bytes += rc;
