@@ -113,7 +113,7 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 		}
 		ret = dfu_download(usb_handle, interface, ret, ret ? buf : NULL);
 		if (ret < 0) {
-			printf(stderr, "Error during download\n");
+			fprintf(stderr, "Error during download\n");
 			goto out_close;
 		}
 		bytes_sent += ret;
