@@ -62,10 +62,13 @@ out_free:
 	return ret;
 }
 
+#define PROGRESS_BAR_WIDTH 50
+
 int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 		      int xfer_size, const char *fname)
 {
 	int ret, fd, bytes_sent = 0;
+	unsigned int bytes_per_hash, hashes = 0;
 	char *buf = malloc(xfer_size);
 	struct stat st;
 	struct dfu_status dst;
@@ -93,28 +96,42 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 		goto out_close;	
 	}
 
+	bytes_per_hash = st.st_size / PROGRESS_BAR_WIDTH;
+	printf("bytes_per_hash=%u\n", bytes_per_hash);
 #if 0
 	read(fd, DFU_HDR);
 #endif
 	printf("Starting download: [");
+	fflush(stdout);
 	while (bytes_sent < st.st_size /* - DFU_HDR */) {
+		int hashes_todo;
+
 		ret = read(fd, buf, xfer_size);
 		if (ret < 0) {
 			perror(fname);
 			goto out_close;
 		}
-		ret = dfu_download(usb_handle, interface, ret, buf);
-		if (ret < 0)
+		ret = dfu_download(usb_handle, interface, ret, ret ? buf : NULL);
+		if (ret < 0) {
+			printf(stderr, "Error during download\n");
 			goto out_close;
+		}
 		bytes_sent += ret;
+
 		do {
 			ret = dfu_get_status(usb_handle, interface, &dst);
-			if (ret < 0)
+			if (ret < 0) {
+				fprintf(stderr, "Error during download get_status\n");
 				goto out_close;
+			}
+			usleep(5000);
 		} while (dst.bState != DFU_STATE_dfuDNLOAD_IDLE ||
 			 dst.bStatus != DFU_STATUS_OK);
-		putchar('#');
-		usleep(5000);
+
+		hashes_todo = (bytes_sent / bytes_per_hash) - hashes;
+		hashes += hashes_todo;
+		while (hashes_todo--)
+			putchar('#');
 		fflush(stdout);
 	}
 
@@ -124,6 +141,7 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 		ret = bytes_sent;
 	
 	printf("] finished!\n");
+	fflush(stdout);
 
 get_status:
 	/* Transition to MANIFEST_SYNC state */
