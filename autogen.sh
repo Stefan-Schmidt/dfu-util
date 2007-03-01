@@ -1,5 +1,4 @@
 #! /bin/sh
-aclocal -I m4
-autoheader
-automake --foreign --add-missing --copy
-autoconf
+AUTOMAKE="automake --foreign --add-missing --copy"
+export AUTOMAKE
+autoreconf
