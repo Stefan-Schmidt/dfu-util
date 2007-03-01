@@ -308,6 +308,8 @@ int main(int argc, char **argv)
 	struct usb_dfu_func_descriptor func_dfu;
 	char *filename = NULL;
 	int final_reset = 0;
+	int page_size = getpagesize();
+	int ret;
 	
 	printf("dfu-util - (C) 2007 by OpenMoko Inc.\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
@@ -461,9 +463,10 @@ int main(int argc, char **argv)
 				break;
 			}
 			printf("Resetting USB...\n");
-			if (usb_reset(_rt_dif.dev_handle) < 0) {
-				fprintf(stderr, "error resetting after detach: %s\n", usb_strerror());
-			}
+			ret = usb_reset(_rt_dif.dev_handle);
+			if (ret < 0 && ret != -ENODEV)
+				fprintf(stderr, "error resetting after detach: %s\n", 
+					usb_strerror());
 			sleep(2);
 			break;
 		case DFU_STATE_dfuERROR:
@@ -581,26 +584,21 @@ status_again:
 	}
 
 	/* Obtain DFU functional descriptor */
-	{
-		int ret;
-		int page_size = getpagesize();
-		
-		ret = usb_get_descriptor(dif->dev_handle, 0x21, dif->interface,
-					 &func_dfu, sizeof(func_dfu));
-		if (ret < 0) {
-			fprintf(stderr, "Error obtaining DFU functional "
-				"descriptor: %s\n", usb_strerror());
-			exit(1);
-		}
-		/* FIXME: Endian! */
-		if (!transfer_size)
-			transfer_size = func_dfu.wTransferSize;
-
-		printf("Transfer Size = 0x%04x\n", transfer_size);
-
-		if (func_dfu.wTransferSize > page_size)
-			func_dfu.wTransferSize = page_size;
+	ret = usb_get_descriptor(dif->dev_handle, 0x21, dif->interface,
+				 &func_dfu, sizeof(func_dfu));
+	if (ret < 0) {
+		fprintf(stderr, "Error obtaining DFU functional "
+			"descriptor: %s\n", usb_strerror());
+		exit(1);
 	}
+	/* FIXME: Endian! */
+	if (!transfer_size)
+		transfer_size = func_dfu.wTransferSize;
+
+	printf("Transfer Size = 0x%04x\n", transfer_size);
+
+	if (func_dfu.wTransferSize > page_size)
+		func_dfu.wTransferSize = page_size;
 	
 	if (DFU_STATUS_OK != status.bStatus ) {
 		printf("WARNING: DFU Status: '%s'\n",
@@ -636,7 +634,8 @@ status_again:
 			fprintf(stderr, "can't detach: %s\n", usb_strerror());
 		}
 		printf("Resetting USB to swithc back to runtime mode\n");
-		if (usb_reset(dif->dev_handle) < 0) {
+		ret = usb_reset(dif->dev_handle);
+		if (ret < 0 && ret != -ENODEV) {
 			fprintf(stderr, "error resetting after download: %s\n", 
 			usb_strerror());
 		}
