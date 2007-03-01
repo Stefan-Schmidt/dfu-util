@@ -432,8 +432,6 @@ int main(int argc, char **argv)
 	if (!get_first_dfu_if(&_rt_dif))
 		exit(1);
 
-	print_dfu_if(&_rt_dif, NULL);
-
 	if (!_rt_dif.flags & DFU_IFF_DFU) {
 		/* In the 'first round' during runtime mode, there can only be one
 	 	* DFU Interface descriptor according to the DFU Spec. */
@@ -510,6 +508,8 @@ int main(int argc, char **argv)
 		/* we're already in DFU mode, so we can skip the detach/reset
 		 * procedure */
 	}
+
+	print_dfu_if(dif, NULL);
 
 	num_ifs = count_dfu_interfaces(dif->dev);
 	if (num_ifs < 0) {
