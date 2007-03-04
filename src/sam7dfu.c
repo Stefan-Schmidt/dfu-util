@@ -97,7 +97,7 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 	}
 
 	bytes_per_hash = st.st_size / PROGRESS_BAR_WIDTH;
-	if (bytes_per_hash = 0)
+	if (bytes_per_hash == 0)
 		bytes_per_hash = 1;
 	printf("bytes_per_hash=%u\n", bytes_per_hash);
 #if 0
