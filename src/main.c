@@ -32,7 +32,6 @@
 #include "sam7dfu.h"
 //#include "config.h"
 
-/* FIXME: how do we learn about PAGE_SIZE in userspace? */
 
 int debug;
 static int verbose = 0;
@@ -153,6 +152,33 @@ static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 	return 0;
 }
 
+static int alt_by_name(struct dfu_if *dfu_if, void *v)
+{
+	struct usb_device *dev = dfu_if->dev;
+	int if_name_str_idx;
+	char name[MAX_STR_LEN+1] = "UNDEFINED";
+
+	if_name_str_idx =
+	    dev->config[dfu_if->configuration].interface[dfu_if->interface].
+	    altsetting[dfu_if->altsetting].iInterface;
+	if (!if_name_str_idx)
+		return 0;
+	if (!dfu_if->dev_handle)
+		dfu_if->dev_handle = usb_open(dfu_if->dev);
+	if (!dfu_if->dev_handle)
+		return 0;
+	if (usb_get_string_simple(dfu_if->dev_handle, if_name_str_idx, name,
+	     MAX_STR_LEN) < 0)
+		return 0; /* should we return an error here ? */
+	if (strcmp(name, v))
+		return 0;
+	/*
+	 * Return altsetting+1 so that we can use return value 0 to indicate
+	 * "not found".
+	 */
+	return dfu_if->altsetting+1;
+}
+
 static int _count_cb(struct dfu_if *dif, void *v)
 {
 	int *count = v;
@@ -264,7 +290,8 @@ static void help(void)
 		"  -d --device vendor:product\tSpecify Vendor/Product ID of DFU device\n"
 		"  -c --cfg config_nr\t\tSpecify the Configuration of DFU device\n"
 		"  -i --intf intf_nr\t\tSpecify the DFU Interface number\n"
-		"  -a --alt alt_nr\t\tSpecify the Altseting of the DFU Interface\n"
+		"  -a --alt alt\t\t\tSpecify the Altsetting of the DFU Interface\n"
+		"\t\t\t\tby name or by number\n"
 		"  -t --transfer-size\t\tSpecify the number of bytes per USB Transfer\n"
 		"  -U --upload file\t\tRead firmware from device into <file>\n"
 		"  -D --download file\t\tWrite firmware from <file> into device\n"
@@ -307,6 +334,8 @@ int main(int argc, char **argv)
 	struct dfu_status status;
 	struct usb_dfu_func_descriptor func_dfu;
 	char *filename = NULL;
+	char *alt_name = NULL; /* query alt name if non-NULL */
+	char *end;
 	int final_reset = 0;
 	int page_size = getpagesize();
 	int ret;
@@ -364,7 +393,9 @@ int main(int argc, char **argv)
 			break;
 		case 'a':
 			/* Interface Alternate Setting */
-			dif->altsetting = atoi(optarg);
+			dif->altsetting = strtoul(optarg, &end, 0);
+			if (*end)
+				alt_name = optarg;
 			dif->flags |= DFU_IFF_ALT;
 			break;
 		case 't':
@@ -538,6 +569,23 @@ int main(int argc, char **argv)
 	if (usb_claim_interface(dif->dev_handle, dif->interface) < 0) {
 		fprintf(stderr, "Cannot claim interface: %s\n", usb_strerror());
 		exit(1);
+	}
+
+	if (alt_name) {
+		int n;
+
+		n = find_dfu_if(dif->dev, &alt_by_name, alt_name);
+		if (!n) {
+			fprintf(stderr, "No such Alternate Setting: \"%s\"\n",
+			    alt_name);
+			exit(1);
+		}
+		if (n < 0) {
+			fprintf(stderr, "Error %d in name lookup\n", n);
+			exit(1);
+		}
+		dif->altsetting = n-1;
+		printf("Looked up \"%s\" = %d\n", alt_name, dif->altsetting);
 	}
 
 	printf("Setting Alternate Setting ...\n");
