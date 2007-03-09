@@ -540,6 +540,22 @@ int main(int argc, char **argv)
 		 * procedure */
 	}
 
+	if (alt_name) {
+		int n;
+
+		n = find_dfu_if(dif->dev, &alt_by_name, alt_name);
+		if (!n) {
+			fprintf(stderr, "No such Alternate Setting: \"%s\"\n",
+			    alt_name);
+			exit(1);
+		}
+		if (n < 0) {
+			fprintf(stderr, "Error %d in name lookup\n", n);
+			exit(1);
+		}
+		dif->altsetting = n-1;
+	}
+
 	print_dfu_if(dif, NULL);
 
 	num_ifs = count_dfu_interfaces(dif->dev);
@@ -569,23 +585,6 @@ int main(int argc, char **argv)
 	if (usb_claim_interface(dif->dev_handle, dif->interface) < 0) {
 		fprintf(stderr, "Cannot claim interface: %s\n", usb_strerror());
 		exit(1);
-	}
-
-	if (alt_name) {
-		int n;
-
-		n = find_dfu_if(dif->dev, &alt_by_name, alt_name);
-		if (!n) {
-			fprintf(stderr, "No such Alternate Setting: \"%s\"\n",
-			    alt_name);
-			exit(1);
-		}
-		if (n < 0) {
-			fprintf(stderr, "Error %d in name lookup\n", n);
-			exit(1);
-		}
-		dif->altsetting = n-1;
-		printf("Looked up \"%s\" = %d\n", alt_name, dif->altsetting);
 	}
 
 	printf("Setting Alternate Setting ...\n");
