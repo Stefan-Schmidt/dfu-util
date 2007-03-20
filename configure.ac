@@ -14,12 +14,15 @@ AM_MAINTAINER_MODE
 AC_PROG_CC
 
 # Checks for libraries.
-AC_CHECK_LIB([usb], [usb_control_msg],,
-                            [AC_MSG_ERROR([libusb not found])] )
+
+PKG_CHECK_MODULES(USB, libusb >= 0.1.4,,
+                 AC_MSG_ERROR([*** Required libusb >= 0.1.4 not installed ***]))
+LIBS="$LIBS $USB_LIBS"
+CFLAGS="$CFLAGS $USB_CFLAGS"
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([usb.h stdlib.h string.h stdio.h])
+AC_CHECK_HEADERS([stdlib.h string.h stdio.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
