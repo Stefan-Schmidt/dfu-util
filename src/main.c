@@ -575,7 +575,7 @@ int main(int argc, char **argv)
 	}
 
 #if 0
-	printf("Setting Configuration...\n");
+	printf("Setting Configuration %u...\n", dif->configuration);
 	if (usb_set_configuration(dif->dev_handle, dif->configuration) < 0) {
 		fprintf(stderr, "Cannot set configuration: %s\n", usb_strerror());
 		exit(1);
@@ -680,7 +680,7 @@ status_again:
 		if (dfu_detach(dif->dev_handle, dif->interface, 1000) < 0) {
 			fprintf(stderr, "can't detach: %s\n", usb_strerror());
 		}
-		printf("Resetting USB to swithc back to runtime mode\n");
+		printf("Resetting USB to switch back to runtime mode\n");
 		ret = usb_reset(dif->dev_handle);
 		if (ret < 0 && ret != -ENODEV) {
 			fprintf(stderr, "error resetting after download: %s\n", 
