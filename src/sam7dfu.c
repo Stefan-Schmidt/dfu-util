@@ -15,6 +15,11 @@
 #include "dfu.h"
 #include "usb_dfu.h"
 
+/* ugly hack for Win32 */
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface, 
 		      int xfer_size, const char *fname)
 {
@@ -76,7 +81,7 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 	if (!buf)
 		return -ENOMEM;
 
-	fd = open(fname, O_RDONLY);
+	fd = open(fname, O_RDONLY|O_BINARY);
 	if (fd < 0) {
 		perror(fname);
 		ret = fd;
