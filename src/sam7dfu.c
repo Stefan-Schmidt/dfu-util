@@ -165,6 +165,9 @@ get_status:
 	switch (dst.bState) {
 	case DFU_STATE_dfuMANIFEST_SYNC:
 	case DFU_STATE_dfuMANIFEST:
+		/* some devices (e.g. TAS1020b) need some time before we
+		 * can obtain the status */
+		sleep(1);
 		goto get_status;
 		break;
 	case DFU_STATE_dfuIDLE:
