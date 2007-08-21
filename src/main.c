@@ -26,6 +26,8 @@
 #include <getopt.h>
 #include <usb.h>
 #include <errno.h>
+#include <byteswap.h>
+#include <endian.h>
 
 #include "dfu.h"
 #include "usb_dfu.h"
@@ -648,8 +650,10 @@ status_again:
 				"descriptor: %s\n", usb_strerror());
 			transfer_size = page_size;
 		} else {
-		    /* FIXME: Endian! */
-		    transfer_size = func_dfu.wTransferSize;
+#if __BYTE_ORDER == __BIG_ENDIAN
+			func_dfu.wTransferSize = bswap_16(func_dfu.wTransferSize);
+#endif
+			transfer_size = func_dfu.wTransferSize;
 		}
 	}
 
