@@ -507,8 +507,8 @@ int main(int argc, char **argv)
 			}
 			break;
 		default:
-			fprintf(stderr, "IMPOSSIBLE: Runtime device already in DFU state ?!?\n");
-			exit(1);
+			fprintf(stderr, "WARNING: Runtime device already in DFU state ?!?\n");
+			goto dfustate;
 			break;
 		}
 
@@ -540,6 +540,7 @@ int main(int argc, char **argv)
 		 * procedure */
 	}
 
+dfustate:
 	if (alt_name) {
 		int n;
 
