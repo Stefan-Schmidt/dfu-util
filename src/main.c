@@ -85,12 +85,20 @@ static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, v
 	for (cfg_idx = 0; cfg_idx < dev->descriptor.bNumConfigurations;
 	     cfg_idx++) {
 		cfg = &dev->config[cfg_idx];
+		/* in some cases, noticably FreeBSD if uid != 0,
+		 * the configuration descriptors are empty */
+		if (!cfg)
+			return 0;
 		for (intf_idx = 0; intf_idx < cfg->bNumInterfaces;
 		     intf_idx++) {
 			uif = &cfg->interface[intf_idx];
+			if (!uif)
+				return 0;
 			for (alt_idx = 0;
 			     alt_idx < uif->num_altsetting; alt_idx++) {
 				intf = &uif->altsetting[alt_idx];
+				if (!intf)
+					return 0;
 				if (intf->bInterfaceClass == 0xfe &&
 				    intf->bInterfaceSubClass == 1) {
 					dfu_if->dev = dev;
