@@ -631,23 +631,25 @@ status_again:
 		break;
 	}
 
-	/* Obtain DFU functional descriptor */
-	ret = usb_get_descriptor(dif->dev_handle, 0x21, dif->interface,
-				 &func_dfu, sizeof(func_dfu));
-	if (ret < 0) {
-		fprintf(stderr, "Error obtaining DFU functional "
-			"descriptor: %s\n", usb_strerror());
-		exit(1);
+	if (!transfer_size) {
+		/* Obtain DFU functional descriptor */
+		ret = usb_get_descriptor(dif->dev_handle, 0x21, dif->interface,
+					 &func_dfu, sizeof(func_dfu));
+		if (ret < 0) {
+			fprintf(stderr, "Error obtaining DFU functional "
+				"descriptor: %s\n", usb_strerror());
+			transfer_size = page_size;
+		} else {
+		    /* FIXME: Endian! */
+		    transfer_size = func_dfu.wTransferSize;
+		}
 	}
-	/* FIXME: Endian! */
-	if (!transfer_size)
-		transfer_size = func_dfu.wTransferSize;
 
+	if (transfer_size > page_size)
+		transfer_size = page_size;
+	
 	printf("Transfer Size = 0x%04x\n", transfer_size);
 
-	if (func_dfu.wTransferSize > page_size)
-		func_dfu.wTransferSize = page_size;
-	
 	if (DFU_STATUS_OK != status.bStatus ) {
 		printf("WARNING: DFU Status: '%s'\n",
 			dfu_status_to_string(status.bStatus));
