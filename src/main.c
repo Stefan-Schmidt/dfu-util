@@ -373,6 +373,8 @@ int main(int argc, char **argv)
 			break;
 		case 'V':
 			/* FIXME */
+			printf("not implemented yet\n");
+			exit(0);
 			break;
 		case 'v':
 			verbose = 1;
