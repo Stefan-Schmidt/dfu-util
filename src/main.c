@@ -324,7 +324,7 @@ static struct option opts[] = {
 	{ "transfer-size", 1, 0, 't' },
 	{ "upload", 1, 0, 'U' },
 	{ "download", 1, 0, 'D' },
-	{ "reset", 1, 0, 'R' },
+	{ "reset", 0, 0, 'R' },
 };
 
 enum mode {
