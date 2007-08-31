@@ -32,7 +32,10 @@
 #include "dfu.h"
 #include "usb_dfu.h"
 #include "sam7dfu.h"
-//#include "config.h"
+#include "dfu-version.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 
 int debug;
@@ -309,6 +312,11 @@ static void help(void)
 		);
 }
 
+static void print_version(void)
+{
+	printf("dfu-util version %s\n", VERSION "+svn" DFU_UTIL_VERSION);
+}
+
 static struct option opts[] = {
 	{ "help", 0, 0, 'h' },
 	{ "version", 0, 0, 'V' },
@@ -372,8 +380,7 @@ int main(int argc, char **argv)
 			exit(0);
 			break;
 		case 'V':
-			/* FIXME */
-			printf("not implemented yet\n");
+			print_version();
 			exit(0);
 			break;
 		case 'v':
