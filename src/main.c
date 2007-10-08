@@ -37,6 +37,10 @@
 #include "config.h"
 #endif
 
+#ifdef HAVE_USBPATH_H
+#include <usbpath.h>
+#endif
+
 
 int debug;
 static int verbose = 0;
@@ -47,6 +51,8 @@ static int verbose = 0;
 #define DFU_IFF_CONFIG		0x0400
 #define DFU_IFF_IFACE		0x0800
 #define DFU_IFF_ALT		0x1000
+#define DFU_IFF_DEVNUM		0x2000
+#define DFU_IFF_PATH		0x4000
 
 struct usb_vendprod {
 	u_int16_t vendor;
@@ -59,6 +65,9 @@ struct dfu_if {
 	u_int8_t configuration;
 	u_int8_t interface;
 	u_int8_t altsetting;
+	int bus;
+	u_int8_t devnum;
+	const char *path;
 	unsigned int flags;
 	struct usb_device *dev;
 
@@ -211,52 +220,73 @@ static int count_dfu_interfaces(struct usb_device *dev)
 	return num_found;
 }
 
-/* Find the first DFU-capable device, save it in dfu_if->dev */
-static int get_first_dfu_device(struct dfu_if *dif)
+
+/* Iterate over all matching DFU capable devices within system */
+static int iterate_dfu_devices(struct dfu_if *dif,
+    int (*action)(struct usb_device *dev, void *user), void *user)
 {
 	struct usb_bus *usb_bus;
 	struct usb_device *dev;
-
-	for (usb_bus = usb_get_busses(); NULL != usb_bus;
-	     usb_bus = usb_bus->next) {
-		for (dev = usb_bus->devices; NULL != dev; dev = dev->next) {
-			if (!dif || 
-			    (dif->flags & (DFU_IFF_VENDOR|DFU_IFF_PRODUCT)) == 0 ||
-			    (dev->descriptor.idVendor == dif->vendor &&
-			     dev->descriptor.idProduct == dif->product)) {
-			     	if (count_dfu_interfaces(dev) >= 1) {
-					dif->dev = dev;
-					return 1;
-				}
-			}
-		}
-	}
-
-	return 0;
-}
-
-/* Count DFU capable devices within system */
-static int count_dfu_devices(struct dfu_if *dif)
-{
-	struct usb_bus *usb_bus;
-	struct usb_device *dev;
-	int num_found = 0;
 
 	/* Walk the tree and find our device. */
 	for (usb_bus = usb_get_busses(); NULL != usb_bus;
 	     usb_bus = usb_bus->next) {
 		for (dev = usb_bus->devices; NULL != dev; dev = dev->next) {
-			if (!dif || 
-			    (dif->flags & (DFU_IFF_VENDOR|DFU_IFF_PRODUCT)) == 0 ||
-			    (dev->descriptor.idVendor == dif->vendor &&
-			     dev->descriptor.idProduct == dif->product)) {
-				if (count_dfu_interfaces(dev) >= 1)
-					num_found++;
-			}
+			int retval;
+
+			if (dif && (dif->flags &
+			    (DFU_IFF_VENDOR|DFU_IFF_PRODUCT)) &&
+		    	    (dev->descriptor.idVendor != dif->vendor ||
+		     	    dev->descriptor.idProduct != dif->product))
+				continue;
+			if (dif && (dif->flags & DFU_IFF_DEVNUM) &&
+		    	    (atoi(usb_bus->dirname) != dif->bus ||
+		     	    dev->devnum != dif->devnum))
+				continue;
+
+			retval = action(dev, user);
+			if (retval)
+				return retval;
 		}
 	}
+	return 0;
+}
+
+
+static int found_dfu_device(struct usb_device *dev, void *user)
+{
+	struct dfu_if *dif = user;
+
+	dif->dev = dev;
+	return 1;
+}
+
+
+/* Find the first DFU-capable device, save it in dfu_if->dev */
+static int get_first_dfu_device(struct dfu_if *dif)
+{
+	return iterate_dfu_devices(dif, found_dfu_device, dif);
+}
+
+
+static int count_one_dfu_device(struct usb_device *dev, void *user)
+{
+	int *num = user;
+
+	(*num)++;
+	return 0;
+}
+
+
+/* Count DFU capable devices within system */
+static int count_dfu_devices(struct dfu_if *dif)
+{
+	int num_found = 0;
+
+	iterate_dfu_devices(dif, count_one_dfu_device, &num_found);
 	return num_found;
 }
+
 
 static int list_dfu_interfaces(void)
 {
@@ -294,6 +324,40 @@ static int parse_vendprod(struct usb_vendprod *vp, const char *str)
 	return 0;
 }
 
+
+#ifdef HAVE_USBPATH_H
+
+static int resolve_device_path(struct dfu_if *dif)
+{
+	int res;
+
+	if (!(dif->flags & DFU_IFF_PATH))
+		return 0;
+
+	res = usb_path2devnum(dif->path);
+	if (res < 0)
+		return -EINVAL;
+	if (!res)
+		return 0;
+
+	dif->bus = atoi(dif->path);
+	dif->devnum = res;
+	dif->flags |= DFU_IFF_DEVNUM;
+	return res;
+}
+
+#else /* HAVE_USBPATH_H */
+
+static int resolve_device_path(struct dfu_if *dif)
+{
+	fprintf(stderr,
+	    "USB device paths are not supported by this dfu-util.\n");
+	exit(1);
+}
+
+#endif /* !HAVE_USBPATH_H */
+
+
 static void help(void)
 {
 	printf("Usage: dfu-util [options] ...\n"
@@ -301,6 +365,7 @@ static void help(void)
 		"  -V --version\t\t\tPrint the version number\n"
 		"  -l --list\t\t\tList the currently attached DFU capable USB devices\n"
 		"  -d --device vendor:product\tSpecify Vendor/Product ID of DFU device\n"
+		"  -p --path bus-port. ... .port\tSpecify path to DFU device\n"
 		"  -c --cfg config_nr\t\tSpecify the Configuration of DFU device\n"
 		"  -i --intf intf_nr\t\tSpecify the DFU Interface number\n"
 		"  -a --alt alt\t\t\tSpecify the Altsetting of the DFU Interface\n"
@@ -323,6 +388,7 @@ static struct option opts[] = {
 	{ "verbose", 0, 0, 'v' },
 	{ "list", 0, 0, 'l' },
 	{ "device", 1, 0, 'd' },
+	{ "path", 1, 0, 'p' },
 	{ "configuration", 1, 0, 'c' },
 	{ "cfg", 1, 0, 'c' },
 	{ "interface", 1, 0, 'i' },
@@ -370,7 +436,7 @@ int main(int argc, char **argv)
 
 	while (1) {
 		int c, option_index = 0;
-		c = getopt_long(argc, argv, "hVvld:c:i:a:t:U:D:R", opts, &option_index);
+		c = getopt_long(argc, argv, "hVvld:p:c:i:a:t:U:D:R", opts, &option_index);
 		if (c == -1)
 			break;
 
@@ -399,6 +465,21 @@ int main(int argc, char **argv)
 			dif->vendor = vendprod.vendor;
 			dif->product = vendprod.product;
 			dif->flags |= (DFU_IFF_VENDOR | DFU_IFF_PRODUCT);
+			break;
+		case 'p':
+			/* Parse device path */
+			dif->path = optarg;
+			dif->flags |= DFU_IFF_PATH;
+			ret = resolve_device_path(dif);
+			if (ret < 0) {
+				fprintf(stderr, "unable to parse `%s'\n",
+				    optarg);
+				exit(2);
+			}
+			if (!ret) {
+				fprintf(stderr, "cannot find `%s'\n", optarg);
+				exit(1);
+			}
 			break;
 		case 'c':
 			/* Configuration */
@@ -534,6 +615,18 @@ int main(int argc, char **argv)
 		/* now we need to re-scan the bus and locate our device */
 		if (usb_find_devices() < 2)
 			printf("not at least 2 device changes found ?!?\n");
+
+		ret = resolve_device_path(dif);
+		if (ret < 0) {
+			fprintf(stderr,
+			    "internal error: cannot re-parse `%s'\n",
+			    dif->path);
+			abort();
+		}
+		if (!ret) {
+			fprintf(stderr, "Can't resolve path after RESET?\n");
+			exit(1);
+		}
 
 		num_devs = count_dfu_devices(dif);
 		if (num_devs == 0) {

@@ -17,12 +17,14 @@ AC_PROG_CC
 
 PKG_CHECK_MODULES(USB, libusb >= 0.1.4,,
                  AC_MSG_ERROR([*** Required libusb >= 0.1.4 not installed ***]))
+AC_CHECK_LIB([usbpath],[usb_path2devnum],,,-lusb)
+
 LIBS="$LIBS $USB_LIBS"
 CFLAGS="$CFLAGS $USB_CFLAGS"
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h string.h stdio.h])
+AC_CHECK_HEADERS([stdlib.h string.h stdio.h usbpath.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
