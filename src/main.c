@@ -331,9 +331,6 @@ static int resolve_device_path(struct dfu_if *dif)
 {
 	int res;
 
-	if (!(dif->flags & DFU_IFF_PATH))
-		return 0;
-
 	res = usb_path2devnum(dif->path);
 	if (res < 0)
 		return -EINVAL;
@@ -616,16 +613,19 @@ int main(int argc, char **argv)
 		if (usb_find_devices() < 2)
 			printf("not at least 2 device changes found ?!?\n");
 
-		ret = resolve_device_path(dif);
-		if (ret < 0) {
-			fprintf(stderr,
-			    "internal error: cannot re-parse `%s'\n",
-			    dif->path);
-			abort();
-		}
-		if (!ret) {
-			fprintf(stderr, "Can't resolve path after RESET?\n");
-			exit(1);
+		if (dif->flags & DFU_IFF_PATH) {
+			ret = resolve_device_path(dif);
+			if (ret < 0) {
+				fprintf(stderr,
+				    "internal error: cannot re-parse `%s'\n",
+				    dif->path);
+				abort();
+			}
+			if (!ret) {
+				fprintf(stderr,
+				    "Can't resolve path after RESET?\n");
+				exit(1);
+			}
 		}
 
 		num_devs = count_dfu_devices(dif);
