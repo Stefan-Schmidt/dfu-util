@@ -243,6 +243,8 @@ static int iterate_dfu_devices(struct dfu_if *dif,
 		    	    (atoi(usb_bus->dirname) != dif->bus ||
 		     	    dev->devnum != dif->devnum))
 				continue;
+			if (!count_dfu_interfaces(dev))
+				continue;
 
 			retval = action(dev, user);
 			if (retval)
