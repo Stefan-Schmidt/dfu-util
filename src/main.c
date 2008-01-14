@@ -41,6 +41,16 @@
 #include <usbpath.h>
 #endif
 
+/* define a portable macro for swapping a 16bit word */
+#if defined(WORDS_BIGENDIAN)
+# if defined(__APPLE__) && defined (OSX)
+#  define LE2CPU16(x)	OSSwapInt16(x)
+# else
+#  define LE2CPU16(x)	bswap_16(x)
+# endif
+#else
+# define LE2CPU16(x)	(x)
+#endif
 
 int debug;
 static int verbose = 0;
@@ -754,9 +764,7 @@ status_again:
 				"descriptor: %s\n", usb_strerror());
 			transfer_size = page_size;
 		} else {
-#if __BYTE_ORDER == __BIG_ENDIAN
-			func_dfu.wTransferSize = bswap_16(func_dfu.wTransferSize);
-#endif
+			func_dfu.wTransferSize = LE2CPU16(func_dfu.wTransferSize);
 			transfer_size = func_dfu.wTransferSize;
 		}
 	}
