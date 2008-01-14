@@ -44,6 +44,7 @@
 /* define a portable macro for swapping a 16bit word */
 #if defined(WORDS_BIGENDIAN)
 # if defined(__APPLE__) && defined (OSX)
+#  include <libkern/OSByteOrder.h>
 #  define LE2CPU16(x)	OSSwapInt16(x)
 # else
 #  define LE2CPU16(x)	bswap_16(x)
