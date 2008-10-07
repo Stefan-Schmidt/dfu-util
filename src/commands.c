@@ -340,7 +340,7 @@ static int execute_upload( struct usb_dev_handle *device,
     if ( 0 > sam7dfu_do_upload(device, interface, 256, /* FIXME */
     			       args.com_flash_data.file) )
     {
-	fprintf( stderr, "Download failed.\n" );
+	fprintf( stderr, "Upload failed.\n" );
 	return -1;
     }
 }
