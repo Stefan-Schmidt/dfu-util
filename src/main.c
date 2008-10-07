@@ -1,7 +1,7 @@
 /*
  * dfu-util
  *
- * (C) 2007 by OpenMoko, Inc.
+ * (C) 2007-2008 by OpenMoko, Inc.
  * Written by Harald Welte <laforge@openmoko.org>
  *
  * Based on existing code of dfu-programmer-0.4
@@ -162,15 +162,20 @@ static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 	int if_name_str_idx;
 	char name[MAX_STR_LEN+1] = "UNDEFINED";
 
-	if_name_str_idx = dev->config[dfu_if->configuration].interface[dfu_if->interface].altsetting[dfu_if->altsetting].iInterface;
+	if_name_str_idx = dev->config[dfu_if->configuration]
+				.interface[dfu_if->interface]
+				.altsetting[dfu_if->altsetting].iInterface;
 	if (if_name_str_idx) {
 		if (!dfu_if->dev_handle)
 			dfu_if->dev_handle = usb_open(dfu_if->dev);
 		if (dfu_if->dev_handle)
-			usb_get_string_simple(dfu_if->dev_handle, if_name_str_idx, name, MAX_STR_LEN);
+			usb_get_string_simple(dfu_if->dev_handle,
+					      if_name_str_idx, name,
+					      MAX_STR_LEN);
 	}
 
-	printf("Found %s: [0x%04x:0x%04x] devnum=%u, cfg=%u, intf=%u, alt=%u, name=\"%s\"\n", 
+	printf("Found %s: [0x%04x:0x%04x] devnum=%u, cfg=%u, intf=%u, "
+	       "alt=%u, name=\"%s\"\n", 
 	       dfu_if->flags & DFU_IFF_DFU ? "DFU" : "Runtime",
 	       dev->descriptor.idVendor, dev->descriptor.idProduct,
 	       dev->devnum, dfu_if->configuration, dfu_if->interface,
@@ -428,7 +433,7 @@ int main(int argc, char **argv)
 	int page_size = getpagesize();
 	int ret;
 	
-	printf("dfu-util - (C) 2007 by OpenMoko Inc.\n"
+	printf("dfu-util - (C) 2007-2008 by OpenMoko Inc.\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
 
 	memset(dif, 0, sizeof(*dif));
@@ -440,7 +445,8 @@ int main(int argc, char **argv)
 
 	while (1) {
 		int c, option_index = 0;
-		c = getopt_long(argc, argv, "hVvld:p:c:i:a:t:U:D:R", opts, &option_index);
+		c = getopt_long(argc, argv, "hVvld:p:c:i:a:t:U:D:R", opts,
+				&option_index);
 		if (c == -1)
 			break;
 
@@ -575,43 +581,53 @@ int main(int argc, char **argv)
 
 		printf("Claiming USB DFU Runtime Interface...\n");
 		if (usb_claim_interface(_rt_dif.dev_handle, _rt_dif.interface) < 0) {
-			fprintf(stderr, "Cannot claim interface: %s\n", usb_strerror());
+			fprintf(stderr, "Cannot claim interface: %s\n",
+				usb_strerror());
 			exit(1);
 		}
 
 		printf("Determining device status: ");
 		if (dfu_get_status(_rt_dif.dev_handle, _rt_dif.interface, &status ) < 0) {
-			fprintf(stderr, "error get_status: %s\n", usb_strerror());
+			fprintf(stderr, "error get_status: %s\n",
+				usb_strerror());
 			exit(1);
 		}
-		printf("state = %s, status = %d\n", dfu_state_to_string(status.bState), status.bStatus);
+		printf("state = %s, status = %d\n", 
+		       dfu_state_to_string(status.bState), status.bStatus);
 
 		switch (status.bState) {
 		case DFU_STATE_appIDLE:
 		case DFU_STATE_appDETACH:
-			printf("Device really in Runtime Mode, send DFU detach request...\n");
-			if (dfu_detach(_rt_dif.dev_handle, _rt_dif.interface, 1000) < 0) {
-				fprintf(stderr, "error detaching: %s\n", usb_strerror());
+			printf("Device really in Runtime Mode, send DFU "
+			       "detach request...\n");
+			if (dfu_detach(_rt_dif.dev_handle, 
+				       _rt_dif.interface, 1000) < 0) {
+				fprintf(stderr, "error detaching: %s\n",
+					usb_strerror());
 				exit(1);
 				break;
 			}
 			printf("Resetting USB...\n");
 			ret = usb_reset(_rt_dif.dev_handle);
 			if (ret < 0 && ret != -ENODEV)
-				fprintf(stderr, "error resetting after detach: %s\n", 
+				fprintf(stderr,
+					"error resetting after detach: %s\n", 
 					usb_strerror());
 			sleep(2);
 			break;
 		case DFU_STATE_dfuERROR:
 			printf("dfuERROR, clearing status\n");
-			if (dfu_clear_status(_rt_dif.dev_handle, _rt_dif.interface) < 0) {
-				fprintf(stderr, "error clear_status: %s\n", usb_strerror());
+			if (dfu_clear_status(_rt_dif.dev_handle,
+					     _rt_dif.interface) < 0) {
+				fprintf(stderr, "error clear_status: %s\n",
+					usb_strerror());
 				exit(1);
 				break;
 			}
 			break;
 		default:
-			fprintf(stderr, "WARNING: Runtime device already in DFU state ?!?\n");
+			fprintf(stderr, "WARNING: Runtime device already "
+				"in DFU state ?!?\n");
 			goto dfustate;
 			break;
 		}
@@ -640,9 +656,9 @@ int main(int argc, char **argv)
 			fprintf(stderr, "Lost device after RESET?\n");
 			exit(1);
 		} else if (num_devs > 1) {
-			fprintf(stderr, "More than one DFU capable USB device found, "
-			       "you might try `--list' and then disconnect all but one "
-			       "device\n");
+			fprintf(stderr, "More than one DFU capable USB "
+				"device found, you might try `--list' and "
+				"then disconnect all but one device\n");
 			exit(1);
 		}
 		if (!get_first_dfu_device(dif))
@@ -651,7 +667,8 @@ int main(int argc, char **argv)
 		printf("Opening USB Device...\n");
 		dif->dev_handle = usb_open(dif->dev);
 		if (!dif->dev_handle) {
-			fprintf(stderr, "Cannot open device: %s\n", usb_strerror());
+			fprintf(stderr, "Cannot open device: %s\n",
+				usb_strerror());
 			exit(1);
 		}
 	} else {
@@ -684,7 +701,8 @@ dfustate:
 		exit(1);
 	} else if (num_ifs == 1) {
 		if (!get_first_dfu_if(dif)) {
-			fprintf(stderr, "Can't find the single available DFU IF\n");
+			fprintf(stderr, "Can't find the single available "
+				"DFU IF\n");
 			exit(1);
 		}
 	} else if (num_ifs > 1 && !dif->flags & (DFU_IFF_IFACE|DFU_IFF_ALT)) {
@@ -697,13 +715,15 @@ dfustate:
 #if 0
 	printf("Setting Configuration %u...\n", dif->configuration);
 	if (usb_set_configuration(dif->dev_handle, dif->configuration) < 0) {
-		fprintf(stderr, "Cannot set configuration: %s\n", usb_strerror());
+		fprintf(stderr, "Cannot set configuration: %s\n",
+			usb_strerror());
 		exit(1);
 	}
 #endif
 	printf("Claiming USB DFU Interface...\n");
 	if (usb_claim_interface(dif->dev_handle, dif->interface) < 0) {
-		fprintf(stderr, "Cannot claim interface: %s\n", usb_strerror());
+		fprintf(stderr, "Cannot claim interface: %s\n",
+			usb_strerror());
 		exit(1);
 	}
 
@@ -720,7 +740,8 @@ status_again:
 		fprintf(stderr, "error get_status: %s\n", usb_strerror());
 		exit(1);
 	}
-	printf("state = %s, status = %d\n", dfu_state_to_string(status.bState), status.bStatus);
+	printf("state = %s, status = %d\n",
+	       dfu_state_to_string(status.bState), status.bStatus);
 
 	switch (status.bState) {
 	case DFU_STATE_appIDLE:
@@ -731,7 +752,8 @@ status_again:
 	case DFU_STATE_dfuERROR:
 		printf("dfuERROR, clearing status\n");
 		if (dfu_clear_status(dif->dev_handle, dif->interface) < 0) {
-			fprintf(stderr, "error clear_status: %s\n", usb_strerror());
+			fprintf(stderr, "error clear_status: %s\n",
+				usb_strerror());
 			exit(1);
 		}
 		goto status_again;
@@ -740,7 +762,8 @@ status_again:
 	case DFU_STATE_dfuUPLOAD_IDLE:
 		printf("aborting previous incomplete transfer\n");
 		if (dfu_abort(dif->dev_handle, dif->interface) < 0) {
-			fprintf(stderr, "can't send DFU_ABORT: %s\n", usb_strerror());
+			fprintf(stderr, "can't send DFU_ABORT: %s\n",
+				usb_strerror());
 			exit(1);
 		}
 		goto status_again;
