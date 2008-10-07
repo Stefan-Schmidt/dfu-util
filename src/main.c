@@ -26,8 +26,6 @@
 #include <getopt.h>
 #include <usb.h>
 #include <errno.h>
-#include <byteswap.h>
-#include <endian.h>
 
 #include "dfu.h"
 #include "usb_dfu.h"
@@ -41,17 +39,13 @@
 #include <usbpath.h>
 #endif
 
-/* define a portable macro for swapping a 16bit word */
-#if defined(WORDS_BIGENDIAN)
-# if defined(__APPLE__) && defined (OSX)
-#  include <libkern/OSByteOrder.h>
-#  define LE2CPU16(x)	OSSwapInt16(x)
-# else
-#  define LE2CPU16(x)	bswap_16(x)
-# endif
-#else
-# define LE2CPU16(x)	(x)
-#endif
+/* define a portable function for reading a 16bit little-endian word */
+unsigned short get_int16_le(const void *p)
+{
+    const unsigned char *cp = p;
+
+    return ( cp[0] ) | ( ((unsigned short)cp[1]) << 8 );
+}
 
 int debug;
 static int verbose = 0;
@@ -765,8 +759,7 @@ status_again:
 				"descriptor: %s\n", usb_strerror());
 			transfer_size = page_size;
 		} else {
-			func_dfu.wTransferSize = LE2CPU16(func_dfu.wTransferSize);
-			transfer_size = func_dfu.wTransferSize;
+			transfer_size = get_int16_le(&func_dfu.wTransferSize);
 		}
 	}
 
