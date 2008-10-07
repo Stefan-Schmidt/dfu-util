@@ -1,5 +1,7 @@
 /* This is supposed to be a "real" DFU implementation, just as specified in the
  * USB DFU 1.0 Spec.  Not overloaded like the Atmel one...
+ *
+ * (C) 2007-2008 by Harald Welte <laforge@gnumonks.org>
  */
 
 #include <stdio.h>
@@ -36,6 +38,10 @@ int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface,
 		goto out_free;
 	}
 	
+	printf("bytes_per_hash=%u\n", xfer_size);
+	printf("Starting upload: [");
+	fflush(stdout);
+
 	while (1) {
 		int rc, write_rc;
 		rc = dfu_upload(usb_handle, interface, xfer_size, buf);
@@ -45,7 +51,7 @@ int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface,
 		}
 		write_rc = write(fd, buf, rc);
 		if (write_rc < rc) {
-			fprintf(stderr, "Short write: %s\n",
+			fprintf(stderr, "Short file write: %s\n",
 				strerror(errno));
 			ret = total_bytes;
 			goto out_close;
@@ -56,8 +62,13 @@ int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface,
 			ret = total_bytes;
 			goto out_close;
 		}
+		putchar('#');
+		fflush(stdout);
 	}
 	ret = 0;
+
+	printf("] finished!\n");
+	fflush(stdout);
 
 out_close:
 	close(fd);
