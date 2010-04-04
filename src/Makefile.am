@@ -2,7 +2,7 @@ AM_CFLAGS = -Wall
 
 dfu-version.h:
 	echo -e '#ifndef DFU_UTIL_VERSION' \
-	'\n#define DFU_UTIL_VERSION "'`svnversion`'"' \
+	'\n#define DFU_UTIL_VERSION "'`svnversion -n`'"' \
 	'\n#endif' > dfu-version.h
 BUILT_SOURCES = dfu-version.h
 
