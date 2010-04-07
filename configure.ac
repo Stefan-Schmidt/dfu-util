@@ -8,6 +8,9 @@ AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 #AC_CONFIG_SRCDIR([src/atmel.c])
 AM_CONFIG_HEADER([config.h])
 
+# Test for new silent rules and enable only if they are available
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
 AM_MAINTAINER_MODE
 
 # Checks for programs.
