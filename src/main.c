@@ -588,6 +588,12 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 
+		if (usb_set_altinterface(_rt_dif.dev_handle, 0) < 0) {
+			fprintf(stderr, "Cannot set alt interface: %s\n",
+				usb_strerror());
+			exit(1);
+		}
+
 		printf("Determining device status: ");
 		if (dfu_get_status(_rt_dif.dev_handle, _rt_dif.interface, &status ) < 0) {
 			fprintf(stderr, "error get_status: %s\n",
