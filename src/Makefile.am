@@ -7,10 +7,20 @@ dfu-version.h:
 BUILT_SOURCES = dfu-version.h
 
 bin_PROGRAMS = dfu-util dfu-util_static
-dfu_util_SOURCES = main.c sam7dfu.c dfu.c dfu.h
+dfu_util_SOURCES = main.c \
+		sam7dfu.c \
+		sam7dfu.h \
+		dfu.c \
+		dfu.h \
+		usb_dfu.h
 
-dfu_util_static_SOURCES = main.c sam7dfu.c dfu.c dfu.h
+dfu_util_static_SOURCES = main.c \
+			sam7dfu.c \
+			sam7dfu.h \
+			dfu.c \
+			dfu.h \
+			usb_dfu.h
+
 dfu_util_static_LDFLAGS = -static
 
-# commands.c commands.h sam7dfu.c
-
+EXTRA_DIST = dfu-version.h
