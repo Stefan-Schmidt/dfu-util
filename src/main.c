@@ -390,7 +390,7 @@ static void help(void)
 
 static void print_version(void)
 {
-	printf("dfu-util version %s\n", VERSION "+svn" DFU_UTIL_VERSION);
+	printf("dfu-util version %s\n", VERSION "+" DFU_UTIL_VERSION);
 }
 
 static struct option opts[] = {
