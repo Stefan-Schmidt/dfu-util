@@ -537,7 +537,7 @@ int main(int argc, char **argv)
 	}
 
 	if (!filename) {
-		fprintf(stderr, "You need to specify a filename to -D -r -U\n");
+		fprintf(stderr, "You need to specify a filename to -D or -U\n");
 		help();
 		exit(2);
 	}
@@ -561,7 +561,7 @@ int main(int argc, char **argv)
 	if (!get_first_dfu_device(dif))
 		exit(3);
 
-	/* We have exactly one device. It's usb_device is now in dif->dev */
+	/* We have exactly one device. Its usb_device is now in dif->dev */
 
 	printf("Opening USB Device 0x%04x:0x%04x...\n", dif->vendor, dif->product);
 	dif->dev_handle = usb_open(dif->dev);
