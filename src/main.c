@@ -462,6 +462,9 @@ int main(int argc, char **argv)
 			exit(0);
 			break;
 		case 'v':
+			if (verbose) {
+				usb_set_debug(255);
+			}
 			verbose = 1;
 			break;
 		case 'l':
@@ -471,7 +474,8 @@ int main(int argc, char **argv)
 		case 'd':
 			/* Parse device */
 			if (parse_vendprod(&vendprod, optarg) < 0) {
-				fprintf(stderr, "unable to parse `%s'\n", optarg);
+				fprintf(stderr, "unable to parse `%s' as a vendor:product\n", optarg);
+
 				exit(2);
 			}
 			dif->vendor = vendprod.vendor;
@@ -583,7 +587,8 @@ int main(int argc, char **argv)
 
 		printf("Claiming USB DFU Runtime Interface...\n");
 		if (usb_claim_interface(_rt_dif.dev_handle, _rt_dif.interface) < 0) {
-			fprintf(stderr, "Cannot claim interface: %s\n",
+			fprintf(stderr, "Cannot claim interface %d: %s\n",
+				_rt_dif.interface,
 				usb_strerror());
 			exit(1);
 		}
@@ -735,7 +740,7 @@ dfustate:
 		exit(1);
 	}
 
-	printf("Setting Alternate Setting ...\n");
+	printf("Setting Alternate Setting #%d ...\n", dif->altsetting);
 	if (usb_set_altinterface(dif->dev_handle, dif->altsetting) < 0) {
 		fprintf(stderr, "Cannot set alternate interface: %s\n",
 			usb_strerror());

@@ -44,7 +44,7 @@ void dfu_init( const int timeout )
         dfu_timeout = timeout;
     } else {
         if( 0 != dfu_debug_level )
-            fprintf( stderr, "dfu_init: Invalid timeout value.\n" );
+            fprintf( stderr, "dfu_init: Invalid timeout value %d.\n", timeout );
     }
 }
 
@@ -142,7 +142,9 @@ int dfu_download( struct usb_dev_handle *device,
           /* wLength       */ length,
                               dfu_timeout );
     if( status < 0 ) {
-        fprintf( stderr, "%s error %d\n", __FUNCTION__, status );
+        fprintf( stderr, "%s: usb_control_msg returned %d: %s\n",
+		 __FUNCTION__,
+		 status, usb_strerror() );
     }
 
     return status;
@@ -188,7 +190,9 @@ int dfu_upload( struct usb_dev_handle *device,
           /* wLength       */ length,
                               dfu_timeout );
     if( status < 0 ) {
-        fprintf( stderr, "%s error %d\n", __FUNCTION__, status );
+        fprintf( stderr, "%s: usb_control_msg returned %d: %s\n",
+		 __FUNCTION__,
+		 status, usb_strerror() );
     }
 
     return status;
