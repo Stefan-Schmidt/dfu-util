@@ -2,7 +2,7 @@
 .SH NAME
 dfu-util \- Device firmware update (DFU) USB programmer
 .SH SYNOPSIS
-.B dfu-util \fR[\fB\-ldpciatUDRhV\fR]
+.B dfu-util \fR[\fB\-ldpciatUDRhvV\fR]
 .SH DESCRIPTION
 .B dfu-util
 is a program that implements the host (PC) side of the USB DFU
@@ -66,6 +66,11 @@ Issue USB reset signalling once we're finished.
 .TP
 .B "\-h, \-\-help"
 Show a help text and exit.
+.TP
+.B "\-v, \-\-verbose"
+Print more information about dfu-util's operation. A second
+.B -v
+will turn on verbose logging of USB requests.
 .TP
 .B "\-V, \-\-version"
 Show version information and exit.
