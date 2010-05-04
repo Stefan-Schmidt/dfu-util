@@ -5,7 +5,6 @@ AC_PREREQ(2.59)
 AC_INIT([dfu-util],[0.1])
 AC_CONFIG_AUX_DIR(m4)
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
-#AC_CONFIG_SRCDIR([src/atmel.c])
 AM_CONFIG_HEADER([config.h])
 
 # Test for new silent rules and enable only if they are available
@@ -17,7 +16,6 @@ AM_MAINTAINER_MODE
 AC_PROG_CC
 
 # Checks for libraries.
-
 PKG_CHECK_MODULES(USB, libusb >= 0.1.4,,
                  AC_MSG_ERROR([*** Required libusb >= 0.1.4 not installed ***]))
 AC_CHECK_LIB([usbpath],[usb_path2devnum],,,-lusb)
