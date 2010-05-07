@@ -1,0 +1,11 @@
+Core:
+- DFU suffix handling
+- Real timeout handling
+- DFU 1.1 extensions
+
+CLI:
+- Status bar end marker or percentage values
+
+Non-Code:
+- List with suported devices / bootloaders
+- Logo
