@@ -438,6 +438,8 @@ int main(int argc, char **argv)
 	printf("dfu-util - (C) 2007-2008 by OpenMoko Inc.\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
 
+	printf("dfu-util does currently only support DFU version 1.0\n\n");
+
 	memset(dif, 0, sizeof(*dif));
 
 	usb_init();
