@@ -1,11 +1,12 @@
 Core:
 - DFU suffix handling
 - Real timeout handling
-- DFU 1.1 extensions
+- DFU 1.1 support
 
 CLI:
 - Status bar end marker or percentage values
 
 Non-Code:
+- Make sure distros pick up the releases
 - List with suported devices / bootloaders
 - Logo
