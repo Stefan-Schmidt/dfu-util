@@ -61,7 +61,7 @@ int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface,
 		if (rc < xfer_size) {
 			/* last block, return */
 			ret = total_bytes;
-			goto out_close;
+			break;
 		}
 		putchar('#');
 		fflush(stdout);
