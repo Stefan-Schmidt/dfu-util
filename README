@@ -8,4 +8,4 @@ firmware from it. Most tests have been done with the Openmoko Neo1973 and
 Freerunner so far but other devices have been reported working and is being
 worked on.
 
-[1] DUF spec: http://www.usb.org/developers/devclass_docs/usbdfu10.pdf
+[1] DFU spec: http://www.usb.org/developers/devclass_docs/usbdfu10.pdf

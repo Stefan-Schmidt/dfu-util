@@ -395,7 +395,7 @@ static const char *dfu_status_names[] = {
 	[DFU_STATUS_errPROG]		=
 		"Program memory function failed",
 	[DFU_STATUS_errVERIFY]		=
-		"Programmed emmory failed verification",
+		"Programmed memory failed verification",
 	[DFU_STATUS_errADDRESS]		=
 		"Cannot program memory due to received address that is out of range",
 	[DFU_STATUS_errNOTDONE]		=
