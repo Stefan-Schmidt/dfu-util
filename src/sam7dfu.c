@@ -23,7 +23,7 @@
 #define O_BINARY 0
 #endif
 
-int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface, 
+int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface,
 		      int xfer_size, const char *fname)
 {
 	int ret, fd, total_bytes = 0;
@@ -38,7 +38,7 @@ int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface,
 		ret = fd;
 		goto out_free;
 	}
-	
+
 	printf("bytes_per_hash=%u\n", xfer_size);
 	printf("Starting upload: [");
 	fflush(stdout);
@@ -75,7 +75,7 @@ out_close:
 	close(fd);
 out_free:
 	free(buf);
-	
+
 	return ret;
 }
 
@@ -99,7 +99,7 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 		ret = fd;
 		goto out_free;
 	}
-	
+
 	ret = fstat(fd, &st);
 	if (ret < 0) {
 		perror(fname);
@@ -166,7 +166,7 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 	ret = dfu_download(usb_handle, interface, 0, NULL);
 	if (ret >= 0)
 		ret = bytes_sent;
-	
+
 	printf("] finished!\n");
 	fflush(stdout);
 
@@ -177,7 +177,7 @@ get_status:
 		fprintf(stderr, "unable to read DFU status\n");
 		goto out_close;
 	}
-	printf("state(%u) = %s, status(%u) = %s\n", dst.bState, 
+	printf("state(%u) = %s, status(%u) = %s\n", dst.bState,
 		dfu_state_to_string(dst.bState), dst.bStatus,
 		dfu_status_to_string(dst.bStatus));
 
@@ -196,7 +196,7 @@ get_status:
 #if 0
 	printf("Resetting USB...\n");
 	if (usb_reset(usb_handle) < 0) {
-		fprintf(stderr, "error resetting after download: %s\n", 
+		fprintf(stderr, "error resetting after download: %s\n",
 			usb_strerror());
 	}
 #endif
