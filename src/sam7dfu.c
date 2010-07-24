@@ -144,7 +144,8 @@ int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 				goto out_close;
 			}
 			usleep(5000);
-		} while (dst.bState != DFU_STATE_dfuDNLOAD_IDLE);
+		} while (dst.bState != DFU_STATE_dfuDNLOAD_IDLE &&
+			 dst.bState != DFU_STATE_dfuERROR);
 		if (dst.bStatus != DFU_STATUS_OK) {
 			printf(" failed!\n");
 			printf("state(%u) = %s, status(%u) = %s\n", dst.bState,
