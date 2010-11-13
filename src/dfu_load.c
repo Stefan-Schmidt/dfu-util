@@ -57,6 +57,7 @@ int dfuload_do_upload(struct usb_dev_handle *usb_handle, int interface,
 	}
 
 	printf("bytes_per_hash=%u\n", xfer_size);
+	printf("Copying data from DFU device to PC\n");
 	printf("Starting upload: [");
 	fflush(stdout);
 
@@ -137,6 +138,7 @@ int dfuload_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 #if 0
 	read(fd, DFU_HDR);
 #endif
+	printf("Copying data from PC to DFU device\n");
 	printf("Starting download: [");
 	fflush(stdout);
 	while (bytes_sent < st.st_size /* - DFU_HDR */) {
