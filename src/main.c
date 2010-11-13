@@ -133,11 +133,9 @@ static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, v
 					dfu_if->altsetting =
 						intf->bAlternateSetting;
 					if (intf->bInterfaceProtocol == 2)
-						dfu_if->flags |=
-							DFU_IFF_DFU;
+						dfu_if->flags |= DFU_IFF_DFU;
 					else
-						dfu_if->flags &=
-							~DFU_IFF_DFU;
+						dfu_if->flags &= ~DFU_IFF_DFU;
 					if (!handler)
 						return 1;
 					rc = handler(dfu_if, v);
