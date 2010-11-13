@@ -459,6 +459,8 @@ int main(int argc, char **argv)
 	int num_devs;
 	int num_ifs;
 	unsigned int transfer_size = 0;
+	unsigned int default_transfer_size = 1024;
+	unsigned int host_page_size;
 	enum mode mode = MODE_NONE;
 	struct dfu_status status;
 	struct usb_dfu_func_descriptor func_dfu;
@@ -466,7 +468,6 @@ int main(int argc, char **argv)
 	char *alt_name = NULL; /* query alt name if non-NULL */
 	char *end;
 	int final_reset = 0;
-	int page_size = getpagesize();
 	int ret;
 	
 	printf("dfu-util - (C) 2005-2008 by Weston Schmidt, Harald Welte and OpenMoko Inc.\n"
@@ -474,6 +475,7 @@ int main(int argc, char **argv)
 
 	printf("dfu-util does currently only support DFU version 1.0\n\n");
 
+	host_page_size = getpagesize();
 	memset(dif, 0, sizeof(*dif));
 
 	usb_init();
@@ -829,16 +831,28 @@ status_again:
 		if (ret < 0) {
 			fprintf(stderr, "Error obtaining DFU functional "
 				"descriptor: %s\n", usb_strerror());
-			transfer_size = page_size;
 		} else {
 			transfer_size = get_int16_le(&func_dfu.wTransferSize);
+			printf("Device returned transfer size %i\n",
+				transfer_size);
 		}
 	}
-
-	if (transfer_size > page_size)
-		transfer_size = page_size;
-	
-	printf("Transfer Size = 0x%04x\n", transfer_size);
+	/* if returned zero or not detected (and not user specified) */
+	if (!transfer_size) {
+		transfer_size = default_transfer_size;
+		printf("Warning: Trying default transfer size %i\n",
+			transfer_size);
+	}
+	/* limitation of Linux usbdevio */
+	if (transfer_size > host_page_size) {
+		transfer_size = host_page_size;
+		printf("Limited transfer size to %i\n", transfer_size);
+	}
+	/* DFU specification */
+	if (transfer_size < dif->dev->descriptor.bMaxPacketSize0) {
+		transfer_size = dif->dev->descriptor.bMaxPacketSize0;
+		printf("Adjusted transfer size to %i\n", transfer_size);
+	}
 
 	if (DFU_STATUS_OK != status.bStatus ) {
 		printf("WARNING: DFU Status: '%s'\n",
