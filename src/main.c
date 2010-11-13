@@ -435,7 +435,7 @@ int main(int argc, char **argv)
 	int page_size = getpagesize();
 	int ret;
 	
-	printf("dfu-util - (C) 2007-2008 by OpenMoko Inc.\n"
+	printf("dfu-util - (C) 2005-2008 by Weston Schmidt, Harald Welte and OpenMoko Inc.\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
 
 	printf("dfu-util does currently only support DFU version 1.0\n\n");
