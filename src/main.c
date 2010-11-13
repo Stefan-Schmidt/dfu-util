@@ -821,12 +821,12 @@ status_again:
 
 	switch (mode) {
 	case MODE_UPLOAD:
-		if (sam7dfu_do_upload(dif->dev_handle, dif->interface,
+		if (dfuload_do_upload(dif->dev_handle, dif->interface,
 				  transfer_size, filename) < 0)
 			exit(1);
 		break;
 	case MODE_DOWNLOAD:
-		if (sam7dfu_do_dnload(dif->dev_handle, dif->interface,
+		if (dfuload_do_dnload(dif->dev_handle, dif->interface,
 				  transfer_size, filename) < 0)
 			exit(1);
 		break;

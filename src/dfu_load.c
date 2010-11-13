@@ -40,7 +40,7 @@
 #define O_BINARY 0
 #endif
 
-int sam7dfu_do_upload(struct usb_dev_handle *usb_handle, int interface,
+int dfuload_do_upload(struct usb_dev_handle *usb_handle, int interface,
 		      int xfer_size, const char *fname)
 {
 	int ret, fd, total_bytes = 0;
@@ -98,7 +98,7 @@ out_free:
 
 #define PROGRESS_BAR_WIDTH 50
 
-int sam7dfu_do_dnload(struct usb_dev_handle *usb_handle, int interface,
+int dfuload_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 		      int xfer_size, const char *fname)
 {
 	int ret, fd, bytes_sent = 0;
@@ -226,7 +226,7 @@ out_free:
 	return ret;
 }
 
-void sam7dfu_init()
+void dfuload_init()
 {
     dfu_debug( debug );
     dfu_init( 5000 );
