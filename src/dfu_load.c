@@ -122,7 +122,6 @@ int dfuload_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 	if (ret < 0) {
 		perror(fname);
 		goto out_close;
-		perror(fname);
 	}
 
 	if (st.st_size <= 0 /* + DFU_HDR */) {
@@ -183,8 +182,10 @@ int dfuload_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 
 	/* send one zero sized download request to signalize end */
 	ret = dfu_download(usb_handle, interface, 0, NULL);
-	if (ret >= 0)
-		ret = bytes_sent;
+	if (ret < 0) {
+		fprintf(stderr, "Error sending completion packet\n");
+		goto out_close;
+	}
 
 	printf("] finished!\n");
 	fflush(stdout);
@@ -225,7 +226,7 @@ out_close:
 out_free:
 	free(buf);
 
-	return ret;
+	return bytes_sent;
 }
 
 void dfuload_init()
@@ -233,5 +234,4 @@ void dfuload_init()
     dfu_debug( debug );
     dfu_init( 5000 );
 }
-
 
