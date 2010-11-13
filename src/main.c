@@ -102,7 +102,7 @@ static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, v
 	int rc;
 
 	memset(dfu_if, 0, sizeof(*dfu_if));
-	
+
 	for (cfg_idx = 0; cfg_idx < dev->descriptor.bNumConfigurations;
 	     cfg_idx++) {
 		cfg = &dev->config[cfg_idx];
@@ -128,12 +128,12 @@ static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, v
 					dfu_if->product =
 						dev->descriptor.idProduct;
 					dfu_if->configuration = cfg_idx;
-					dfu_if->interface = 
+					dfu_if->interface =
 						intf->bInterfaceNumber;
-					dfu_if->altsetting = 
+					dfu_if->altsetting =
 						intf->bAlternateSetting;
 					if (intf->bInterfaceProtocol == 2)
-						dfu_if->flags |= 
+						dfu_if->flags |=
 							DFU_IFF_DFU;
 					else
 						dfu_if->flags &=
@@ -248,12 +248,12 @@ static int iterate_dfu_devices(struct dfu_if *dif,
 
 			if (dif && (dif->flags &
 			    (DFU_IFF_VENDOR|DFU_IFF_PRODUCT)) &&
-		    	    (dev->descriptor.idVendor != dif->vendor ||
-		     	    dev->descriptor.idProduct != dif->product))
+			    (dev->descriptor.idVendor != dif->vendor ||
+			    dev->descriptor.idProduct != dif->product))
 				continue;
 			if (dif && (dif->flags & DFU_IFF_DEVNUM) &&
-		    	    (atoi(usb_bus->dirname) != dif->bus ||
-		     	    dev->devnum != dif->devnum))
+			    (atoi(usb_bus->dirname) != dif->bus ||
+			    dev->devnum != dif->devnum))
 				continue;
 			if (!count_dfu_interfaces(dev))
 				continue;
@@ -469,7 +469,7 @@ int main(int argc, char **argv)
 	char *end;
 	int final_reset = 0;
 	int ret;
-	
+
 	printf("dfu-util - (C) 2005-2008 by Weston Schmidt, Harald Welte and OpenMoko Inc.\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
 
@@ -619,7 +619,7 @@ int main(int argc, char **argv)
 
 	if (!_rt_dif.flags & DFU_IFF_DFU) {
 		/* In the 'first round' during runtime mode, there can only be one
-	 	* DFU Interface descriptor according to the DFU Spec. */
+		* DFU Interface descriptor according to the DFU Spec. */
 
 		/* FIXME: check if the selected device really has only one */
 
