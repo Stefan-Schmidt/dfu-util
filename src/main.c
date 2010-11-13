@@ -31,7 +31,7 @@
 
 #include "dfu.h"
 #include "usb_dfu.h"
-#include "sam7dfu.h"
+#include "dfu_load.h"
 #include "dfu-version.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"

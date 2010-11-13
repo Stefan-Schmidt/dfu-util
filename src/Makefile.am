@@ -8,8 +8,8 @@ BUILT_SOURCES = dfu-version.h
 
 bin_PROGRAMS = dfu-util
 dfu_util_SOURCES = main.c \
-		sam7dfu.c \
-		sam7dfu.h \
+		dfu_load.c \
+		dfu_load.h \
 		dfu.c \
 		dfu.h \
 		usb_dfu.h
