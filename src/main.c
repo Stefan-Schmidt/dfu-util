@@ -368,6 +368,40 @@ static int resolve_device_path(struct dfu_if *dif)
 
 #endif /* !HAVE_USBPATH_H */
 
+/* Look for descriptor in the configuration descriptor output */
+static int usb_get_extra_descriptor(usb_dev_handle *udev, unsigned char type,
+			unsigned char index, void *resbuf, int size)
+{
+	char *cbuf;
+	int desclen, conflen, smallest;
+	int ret;
+	int p = 0;
+	int foundlen = 0;
+
+	conflen = (usb_device(udev))->config->wTotalLength;
+	cbuf = malloc(conflen);
+	ret = usb_get_descriptor(udev, USB_DT_CONFIG, index, cbuf, conflen);
+	if (ret < conflen) {
+		fprintf(stderr, "Warning: failed to retrieve complete"
+			"configuration descriptor\n");
+		conflen = ret;
+	}
+	while (p + 1 < conflen) {
+		desclen = (int) cbuf[p];
+		if (cbuf[p + 1] == type) {
+			smallest = desclen < size ? desclen : size;
+			memcpy(resbuf, &cbuf[p], smallest);
+			foundlen = smallest;
+			break;
+		}
+		p += desclen;
+	}
+	free(cbuf);
+	if (foundlen > 1)
+		return foundlen;
+	/* try to retrieve it through usb_get_descriptor directly */
+	return usb_get_descriptor(udev, type, index, resbuf, size);
+}
 
 static void help(void)
 {
@@ -790,8 +824,8 @@ status_again:
 
 	if (!transfer_size) {
 		/* Obtain DFU functional descriptor */
-		ret = usb_get_descriptor(dif->dev_handle, 0x21, dif->interface,
-					 &func_dfu, sizeof(func_dfu));
+		ret = usb_get_extra_descriptor(dif->dev_handle, USB_DT_DFU,
+				dif->interface, &func_dfu, sizeof(func_dfu));
 		if (ret < 0) {
 			fprintf(stderr, "Error obtaining DFU functional "
 				"descriptor: %s\n", usb_strerror());
