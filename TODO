@@ -5,6 +5,7 @@ Core:
 
 CLI:
 - Status bar end marker or percentage values
+- Warning/Error when overwriting a file on the PC during a upload
 
 Non-Code:
 - Make sure distros pick up the releases
