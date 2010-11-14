@@ -33,6 +33,7 @@
 #include "usb_dfu.h"
 #include "dfu_load.h"
 #include "dfu-version.h"
+#include "quirks.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -603,7 +604,7 @@ int main(int argc, char **argv)
 
 	/* We have exactly one device. Its usb_device is now in dif->dev */
 
-	printf("Opening USB Device 0x%04x:0x%04x...\n", dif->vendor, dif->product);
+	printf("Opening DFU USB device... ");
 	dif->dev_handle = usb_open(dif->dev);
 	if (!dif->dev_handle) {
 		fprintf(stderr, "Cannot open device: %s\n", usb_strerror());
@@ -614,6 +615,11 @@ int main(int argc, char **argv)
 	memcpy(&_rt_dif, dif, sizeof(_rt_dif));
 	if (!get_first_dfu_if(&_rt_dif))
 		exit(1);
+
+	printf("ID %04x:%04x\n", _rt_dif.vendor, _rt_dif.product);
+
+	/* find set of quirks for this device */
+	set_quirks(_rt_dif.vendor, _rt_dif.product);
 
 	if (!_rt_dif.flags & DFU_IFF_DFU) {
 		/* In the 'first round' during runtime mode, there can only be one
@@ -643,6 +649,8 @@ int main(int argc, char **argv)
 		}
 		printf("state = %s, status = %d\n", 
 		       dfu_state_to_string(status.bState), status.bStatus);
+		if (!(quirks & QUIRK_POLLTIMEOUT))
+			usleep(status.bwPollTimeout * 1000);
 
 		switch (status.bState) {
 		case DFU_STATE_appIDLE:
@@ -791,6 +799,8 @@ status_again:
 	}
 	printf("state = %s, status = %d\n",
 	       dfu_state_to_string(status.bState), status.bStatus);
+	if (!(quirks & QUIRK_POLLTIMEOUT))
+		usleep(status.bwPollTimeout * 1000);
 
 	switch (status.bState) {
 	case DFU_STATE_appIDLE:
@@ -863,6 +873,8 @@ status_again:
 			fprintf(stderr, "Error: %d\n", status.bStatus);
 			exit(1);
 		}
+		if (!(quirks & QUIRK_POLLTIMEOUT))
+			usleep(status.bwPollTimeout * 1000);
         }
 
 	switch (mode) {

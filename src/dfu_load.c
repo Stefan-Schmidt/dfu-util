@@ -34,6 +34,8 @@
 #include "config.h"
 #include "dfu.h"
 #include "usb_dfu.h"
+#include "dfu_load.h"
+#include "quirks.h"
 
 /* ugly hack for Win32 */
 #ifndef O_BINARY
@@ -161,7 +163,12 @@ int dfuload_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 				fprintf(stderr, "Error during download get_status\n");
 				goto out_close;
 			}
-			usleep(5000);
+			/* Wait while device executes flashing */
+			if (quirks & QUIRK_POLLTIMEOUT)
+				usleep(DEFAULT_POLLTIMEOUT * 1000);
+			else
+				usleep(dst.bwPollTimeout * 1000);
+
 		} while (dst.bState != DFU_STATE_dfuDNLOAD_IDLE &&
 			 dst.bState != DFU_STATE_dfuERROR);
 		if (dst.bStatus != DFU_STATUS_OK) {
@@ -200,6 +207,8 @@ get_status:
 	printf("state(%u) = %s, status(%u) = %s\n", dst.bState,
 		dfu_state_to_string(dst.bState), dst.bStatus,
 		dfu_status_to_string(dst.bStatus));
+	if (!(quirks & QUIRK_POLLTIMEOUT))
+		usleep(dst.bwPollTimeout * 1000);
 
 	/* FIXME: deal correctly with ManifestationTolerant=0 / WillDetach bits */
 	switch (dst.bState) {

@@ -12,6 +12,7 @@ dfu_util_SOURCES = main.c \
 		dfu_load.h \
 		dfu.c \
 		dfu.h \
-		usb_dfu.h
+		usb_dfu.h \
+		quirks.c
 
 EXTRA_DIST = dfu-version.h
