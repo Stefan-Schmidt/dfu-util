@@ -51,7 +51,7 @@ int dfuload_do_upload(struct usb_dev_handle *usb_handle, int interface,
 	if (!buf)
 		return -ENOMEM;
 
-	fd = creat(fname, 0644);
+	fd = open(fname, O_WRONLY|O_CREAT|O_EXCL, 0644);
 	if (fd < 0) {
 		perror(fname);
 		ret = fd;
