@@ -1,6 +1,5 @@
 Core:
 - DFU suffix handling
-- Real timeout handling
 - DFU 1.1 support
 
 CLI:
