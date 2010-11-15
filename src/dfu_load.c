@@ -140,7 +140,7 @@ int dfuload_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 	read(fd, DFU_HDR);
 #endif
 	printf("Copying data from PC to DFU device\n");
-	printf("Starting download: [");
+	printf("Starting download: [   ");
 	fflush(stdout);
 	while (bytes_sent < st.st_size /* - DFU_HDR */) {
 		int hashes_todo;
@@ -182,8 +182,8 @@ int dfuload_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 
 		hashes_todo = (bytes_sent / bytes_per_hash) - hashes;
 		hashes += hashes_todo;
-		while (hashes_todo--)
-			putchar('#');
+		/* Print progress as percentage */
+		printf("\b\b\b%02i%%", 2*hashes);
 		fflush(stdout);
 	}
 
