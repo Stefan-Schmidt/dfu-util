@@ -1,3 +1,23 @@
+0.2:
+	o Fix some typos on the website and the README (Antonio Ospite, Uwe
+	  Hermann)
+	o Remove build rule for a static binary. We can use autotools for this.
+	  (Mike Frysinger)
+	o Fix infinite loop in download error path (C. Scott Ananian)
+	o Break out to show the 'finished' in upload (C. Scott Ananian)
+	o Add GPLv2+ headers (Harald Welte)
+	o Remove dead code (commands.[ch]) remnescent of dfu-programmer (Harald
+	  Welte)
+	o Simple quirk system with Openmoko quirk for missing bwPollTimeout (Tormod Volden)
+	o New default (1024) and clamping of transfer size (Tormod Volden)
+	o Verify sending of completion packet (Tormod Volden)
+	o Look for DFU functional descriptor among all descriptors (Tormod
+	  Volden)
+	o Print out in which direction we are transferring data
+	o Abort in upload if the file already exists
+
+2010-11-17 Stefan Schmidt <stefan@datenfreihafen.org>
+
 0.1:
 	Initial release
 
