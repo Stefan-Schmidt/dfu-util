@@ -32,7 +32,6 @@
 #include "dfu.h"
 #include "usb_dfu.h"
 #include "dfu_load.h"
-#include "dfu-version.h"
 #include "quirks.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -423,7 +422,7 @@ static void help(void)
 
 static void print_version(void)
 {
-	printf("dfu-util version %s\n", VERSION "+" DFU_UTIL_VERSION);
+	printf("dfu-util version %s\n", VERSION);
 }
 
 static struct option opts[] = {
