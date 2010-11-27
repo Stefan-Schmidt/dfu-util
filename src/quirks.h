@@ -1,8 +1,9 @@
 #ifndef DFU_QUIRKS_H
 #define DFU_QUIRKS_H
 
-#define VENDOR_OPENMOKO 0x1d50
-#define VENDOR_FIC      0x1457
+#define VENDOR_OPENMOKO 0x1d50 /* Openmoko Freerunner / GTA02 */
+#define VENDOR_FIC      0x1457 /* Openmoko Freerunner / GTA02 */
+#define VENDOR_VOTI	0x16c0 /* OpenPCD Reader */
 
 #define QUIRK_POLLTIMEOUT  (1<<0)
 

@@ -24,6 +24,7 @@ void set_quirks(unsigned long vendor, unsigned long product)
 {
 	/* Device returns bogus bwPollTimeout values */
 	if (vendor == VENDOR_OPENMOKO ||
-	    vendor == VENDOR_FIC)
+	    vendor == VENDOR_FIC ||
+	    vendor == VENDOR_VOTI)
 		quirks |= QUIRK_POLLTIMEOUT;
 }
