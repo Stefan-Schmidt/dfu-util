@@ -1,12 +1,17 @@
 Core:
 - DFU suffix handling
 - DFU 1.1 support
+- Port to libusb 1.0 API
 
 CLI:
 - Status bar end marker or percentage values
-- Warning/Error when overwriting a file on the PC during a upload
+
+Devices:
+- Research iPhone/iPod/iPad support
+- Test against Niftylights
 
 Non-Code:
 - Make sure distros pick up the releases
 - List with supported devices / bootloaders
 - Logo
+- Re-License as LGPL for usage as library?
