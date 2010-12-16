@@ -1,3 +1,3 @@
 SUBDIRS = src doc
 
-EXTRA_DIST = autogen.sh TODO
+EXTRA_DIST = autogen.sh TODO DEVICES.txt
