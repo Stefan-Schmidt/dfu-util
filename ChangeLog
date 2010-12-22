@@ -1,3 +1,8 @@
+0.3:
+	o quirks: Add OpenOCD to the poll timeout quirk table.
+
+2010-12-22: Stefan Schmidt <stefan@datenfreihafen.org>
+
 0.2:
 	o Fix some typos on the website and the README (Antonio Ospite, Uwe
 	  Hermann)
