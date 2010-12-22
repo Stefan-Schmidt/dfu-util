@@ -1,7 +1,6 @@
 Core:
 - DFU suffix handling
 - DFU 1.1 support
-- Port to libusb 1.0 API
 
 CLI:
 - Status bar end marker or percentage values

@@ -21,7 +21,7 @@
  */
 
 #include <stdio.h>
-#include <usb.h>
+#include <libusb.h>
 #include "dfu.h"
 
 /* DFU commands */
@@ -79,15 +79,15 @@ void dfu_debug( const int level )
  *
  *  returns 0 or < 0 on error
  */
-int dfu_detach( struct usb_dev_handle *device,
+int dfu_detach( libusb_device_handle *device,
                 const unsigned short interface,
                 const unsigned short timeout )
 {
     if( 0 != dfu_verify_init(__FUNCTION__) )
         return -1;
 
-    return usb_control_msg( device,
-        /* bmRequestType */ USB_ENDPOINT_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    return libusb_control_transfer( device,
+        /* bmRequestType */ LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE,
         /* bRequest      */ DFU_DETACH,
         /* wValue        */ timeout,
         /* wIndex        */ interface,
@@ -108,10 +108,10 @@ int dfu_detach( struct usb_dev_handle *device,
  *
  *  returns the number of bytes written or < 0 on error
  */
-int dfu_download( struct usb_dev_handle *device,
+int dfu_download( libusb_device_handle *device,
                   const unsigned short interface,
                   const unsigned short length,
-                  char* data )
+                  unsigned char* data )
 {
     int status;
 
@@ -135,8 +135,8 @@ int dfu_download( struct usb_dev_handle *device,
         return -2;
     }
 
-    status = usb_control_msg( device,
-          /* bmRequestType */ USB_ENDPOINT_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    status = libusb_control_transfer( device,
+          /* bmRequestType */ LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE,
           /* bRequest      */ DFU_DNLOAD,
           /* wValue        */ transaction++,
           /* wIndex        */ interface,
@@ -144,9 +144,9 @@ int dfu_download( struct usb_dev_handle *device,
           /* wLength       */ length,
                               dfu_timeout );
     if( status < 0 ) {
-        fprintf( stderr, "%s: usb_control_msg returned %d: %s\n",
+        fprintf( stderr, "%s: libusb_control_transfer returned %d\n",
 		 __FUNCTION__,
-		 status, usb_strerror() );
+		 status);
     }
 
     return status;
@@ -164,10 +164,10 @@ int dfu_download( struct usb_dev_handle *device,
  *
  *  returns the number of bytes received or < 0 on error
  */
-int dfu_upload( struct usb_dev_handle *device,
+int dfu_upload( libusb_device_handle *device,
                 const unsigned short interface,
                 const unsigned short length,
-                char* data )
+                unsigned char* data )
 {
     int status;
 
@@ -183,8 +183,8 @@ int dfu_upload( struct usb_dev_handle *device,
         return -1;
     }
 
-    status = usb_control_msg( device,
-          /* bmRequestType */ USB_ENDPOINT_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    status = libusb_control_transfer( device,
+          /* bmRequestType */ LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE,
           /* bRequest      */ DFU_UPLOAD,
           /* wValue        */ transaction++,
           /* wIndex        */ interface,
@@ -192,9 +192,9 @@ int dfu_upload( struct usb_dev_handle *device,
           /* wLength       */ length,
                               dfu_timeout );
     if( status < 0 ) {
-        fprintf( stderr, "%s: usb_control_msg returned %d: %s\n",
+        fprintf( stderr, "%s: libusb_control_msg returned %d\n",
 		 __FUNCTION__,
-		 status, usb_strerror() );
+		 status);
     }
 
     return status;
@@ -210,11 +210,11 @@ int dfu_upload( struct usb_dev_handle *device,
  *
  *  return the number of bytes read in or < 0 on an error
  */
-int dfu_get_status( struct usb_dev_handle *device,
+int dfu_get_status( libusb_device_handle *device,
                     const unsigned short interface,
                     struct dfu_status *status )
 {
-    char buffer[6];
+    unsigned char buffer[6];
     int result;
 
     if( 0 != dfu_verify_init(__FUNCTION__) )
@@ -226,8 +226,8 @@ int dfu_get_status( struct usb_dev_handle *device,
     status->bState        = STATE_DFU_ERROR;
     status->iString       = 0;
 
-    result = usb_control_msg( device,
-          /* bmRequestType */ USB_ENDPOINT_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    result = libusb_control_transfer( device,
+          /* bmRequestType */ LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE,
           /* bRequest      */ DFU_GETSTATUS,
           /* wValue        */ 0,
           /* wIndex        */ interface,
@@ -257,14 +257,14 @@ int dfu_get_status( struct usb_dev_handle *device,
  *
  *  return 0 or < 0 on an error
  */
-int dfu_clear_status( struct usb_dev_handle *device,
+int dfu_clear_status( libusb_device_handle *device,
                       const unsigned short interface )
 {
     if( 0 != dfu_verify_init(__FUNCTION__) )
         return -1;
 
-    return usb_control_msg( device,
-        /* bmRequestType */ USB_ENDPOINT_OUT| USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    return libusb_control_transfer( device,
+        /* bmRequestType */ LIBUSB_ENDPOINT_OUT| LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE,
         /* bRequest      */ DFU_CLRSTATUS,
         /* wValue        */ 0,
         /* wIndex        */ interface,
@@ -285,17 +285,17 @@ int dfu_clear_status( struct usb_dev_handle *device,
  *
  *  returns the state or < 0 on error
  */
-int dfu_get_state( struct usb_dev_handle *device,
+int dfu_get_state( libusb_device_handle *device,
                    const unsigned short interface )
 {
     int result;
-    char buffer[1];
+    unsigned char buffer[1];
 
     if( 0 != dfu_verify_init(__FUNCTION__) )
         return -1;
 
-    result = usb_control_msg( device,
-          /* bmRequestType */ USB_ENDPOINT_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    result = libusb_control_transfer( device,
+          /* bmRequestType */ LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE,
           /* bRequest      */ DFU_GETSTATE,
           /* wValue        */ 0,
           /* wIndex        */ interface,
@@ -321,14 +321,14 @@ int dfu_get_state( struct usb_dev_handle *device,
  *
  *  returns 0 or < 0 on an error
  */
-int dfu_abort( struct usb_dev_handle *device,
+int dfu_abort( libusb_device_handle *device,
                const unsigned short interface )
 {
     if( 0 != dfu_verify_init(__FUNCTION__) )
         return -1;
 
-    return usb_control_msg( device,
-        /* bmRequestType */ USB_ENDPOINT_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+    return libusb_control_transfer( device,
+        /* bmRequestType */ LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE,
         /* bRequest      */ DFU_ABORT,
         /* wValue        */ 0,
         /* wIndex        */ interface,

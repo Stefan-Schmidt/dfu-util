@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <getopt.h>
-#include <usb.h>
+#include <libusb.h>
 #include <errno.h>
 
 #include "dfu.h"
@@ -76,36 +76,39 @@ struct dfu_if {
 	u_int8_t devnum;
 	const char *path;
 	unsigned int flags;
-	struct usb_device *dev;
+	libusb_device *dev;
 
-	struct usb_dev_handle *dev_handle;
+	libusb_device_handle *dev_handle;
 };
 
 static int _get_first_cb(struct dfu_if *dif, void *v)
 {
 	struct dfu_if *v_dif = v;
 
-	memcpy(v_dif, dif, sizeof(*v_dif)-sizeof(struct usb_dev_handle *));
+	memcpy(v_dif, dif, sizeof(*v_dif)-sizeof(libusb_device_handle *));
 
 	/* return a value that makes find_dfu_if return immediately */
 	return 1;
 }
 
 /* Find a DFU interface (and altsetting) in a given device */
-static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, void *), void *v)
+static int find_dfu_if(libusb_device *dev, int (*handler)(struct dfu_if *, void *), void *v)
 {
-	struct usb_config_descriptor *cfg;
-	struct usb_interface_descriptor *intf;
-	struct usb_interface *uif;
+	struct libusb_device_descriptor desc;
+	struct libusb_config_descriptor *cfg;
+	const struct libusb_interface_descriptor *intf;
+	const struct libusb_interface *uif;
 	struct dfu_if _dif, *dfu_if = &_dif;
 	int cfg_idx, intf_idx, alt_idx;
 	int rc;
 
+	libusb_get_device_descriptor(dev, &desc);
+
 	memset(dfu_if, 0, sizeof(*dfu_if));
 
-	for (cfg_idx = 0; cfg_idx < dev->descriptor.bNumConfigurations;
+	for (cfg_idx = 0; cfg_idx < desc.bNumConfigurations;
 	     cfg_idx++) {
-		cfg = &dev->config[cfg_idx];
+		libusb_get_config_descriptor(dev, cfg_idx, &cfg);
 		/* in some cases, noticably FreeBSD if uid != 0,
 		 * the configuration descriptors are empty */
 		if (!cfg)
@@ -124,9 +127,9 @@ static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, v
 				    intf->bInterfaceSubClass == 1) {
 					dfu_if->dev = dev;
 					dfu_if->vendor =
-						dev->descriptor.idVendor;
+						desc.idVendor;
 					dfu_if->product =
-						dev->descriptor.idProduct;
+						desc.idProduct;
 					dfu_if->configuration = cfg_idx;
 					dfu_if->interface =
 						intf->bInterfaceNumber;
@@ -143,6 +146,7 @@ static int find_dfu_if(struct usb_device *dev, int (*handler)(struct dfu_if *, v
 						return rc;
 				}
 			}
+		libusb_free_config_descriptor(cfg);
 		}
 	}
 
@@ -158,18 +162,20 @@ static int get_first_dfu_if(struct dfu_if *dif)
 
 static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 {
-	struct usb_device *dev = dfu_if->dev;
+	libusb_device *dev = dfu_if->dev;
+	struct libusb_config_descriptor *cfg;
 	int if_name_str_idx;
-	char name[MAX_STR_LEN+1] = "UNDEFINED";
+	unsigned char name[MAX_STR_LEN+1] = "UNDEFINED";
 
-	if_name_str_idx = dev->config[dfu_if->configuration]
-				.interface[dfu_if->interface]
+	libusb_get_config_descriptor(dev, dfu_if->configuration, &cfg);
+
+	if_name_str_idx = cfg->interface[dfu_if->interface]
 				.altsetting[dfu_if->altsetting].iInterface;
 	if (if_name_str_idx) {
 		if (!dfu_if->dev_handle)
-			dfu_if->dev_handle = usb_open(dfu_if->dev);
+			libusb_open(dfu_if->dev, &dfu_if->dev_handle);
 		if (dfu_if->dev_handle)
-			usb_get_string_simple(dfu_if->dev_handle,
+			libusb_get_string_descriptor_ascii(dfu_if->dev_handle,
 					      if_name_str_idx, name,
 					      MAX_STR_LEN);
 	}
@@ -177,32 +183,35 @@ static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 	printf("Found %s: [0x%04x:0x%04x] devnum=%u, cfg=%u, intf=%u, "
 	       "alt=%u, name=\"%s\"\n", 
 	       dfu_if->flags & DFU_IFF_DFU ? "DFU" : "Runtime",
-	       dev->descriptor.idVendor, dev->descriptor.idProduct,
-	       dev->devnum, dfu_if->configuration, dfu_if->interface,
+	       dfu_if->vendor, dfu_if->product, dfu_if->devnum,
+		dfu_if->configuration, dfu_if->interface,
 	       dfu_if->altsetting, name);
 
+	libusb_free_config_descriptor(cfg);
 	return 0;
 }
 
 static int alt_by_name(struct dfu_if *dfu_if, void *v)
 {
-	struct usb_device *dev = dfu_if->dev;
+	libusb_device *dev = dfu_if->dev;
+	struct libusb_config_descriptor *cfg;
 	int if_name_str_idx;
-	char name[MAX_STR_LEN+1] = "UNDEFINED";
+	unsigned char name[MAX_STR_LEN+1] = "UNDEFINED";
 
-	if_name_str_idx =
-	    dev->config[dfu_if->configuration].interface[dfu_if->interface].
-	    altsetting[dfu_if->altsetting].iInterface;
+	libusb_get_config_descriptor(dev, dfu_if->configuration, &cfg);
+
+	if_name_str_idx = cfg->interface[dfu_if->interface]
+				.altsetting[dfu_if->altsetting].iInterface;
 	if (!if_name_str_idx)
 		return 0;
 	if (!dfu_if->dev_handle)
-		dfu_if->dev_handle = usb_open(dfu_if->dev);
+		libusb_open(dfu_if->dev, &dfu_if->dev_handle);
 	if (!dfu_if->dev_handle)
 		return 0;
-	if (usb_get_string_simple(dfu_if->dev_handle, if_name_str_idx, name,
+	if (libusb_get_string_descriptor_ascii(dfu_if->dev_handle, if_name_str_idx, name,
 	     MAX_STR_LEN) < 0)
 		return 0; /* should we return an error here ? */
-	if (strcmp(name, v))
+	if (strcmp((char *)name, v))
 		return 0;
 	/*
 	 * Return altsetting+1 so that we can use return value 0 to indicate
@@ -221,7 +230,7 @@ static int _count_cb(struct dfu_if *dif, void *v)
 }
 
 /* Count DFU interfaces within a single device */
-static int count_dfu_interfaces(struct usb_device *dev)
+static int count_dfu_interfaces(libusb_device *dev)
 {
 	int num_found = 0;
 
@@ -233,39 +242,48 @@ static int count_dfu_interfaces(struct usb_device *dev)
 
 /* Iterate over all matching DFU capable devices within system */
 static int iterate_dfu_devices(struct dfu_if *dif,
-    int (*action)(struct usb_device *dev, void *user), void *user)
+    int (*action)(struct libusb_device *dev, void *user), void *user)
 {
-	struct usb_bus *usb_bus;
-	struct usb_device *dev;
+	struct libusb_device_descriptor desc;
+	struct libusb_device *dev;
+	libusb_device **list;
+	ssize_t num_devs, i;
+
+	dev = NULL;
+	num_devs = libusb_get_device_list(NULL, &list); // FIXME set context
 
 	/* Walk the tree and find our device. */
-	for (usb_bus = usb_get_busses(); NULL != usb_bus;
-	     usb_bus = usb_bus->next) {
-		for (dev = usb_bus->devices; NULL != dev; dev = dev->next) {
-			int retval;
+	for (i = 0; i < num_devs; ++i) {
+		uint8_t bnum = libusb_get_bus_number(list[i]);
+		uint8_t dnum = libusb_get_device_address(list[i]);
 
-			if (dif && (dif->flags &
-			    (DFU_IFF_VENDOR|DFU_IFF_PRODUCT)) &&
-			    (dev->descriptor.idVendor != dif->vendor ||
-			    dev->descriptor.idProduct != dif->product))
-				continue;
-			if (dif && (dif->flags & DFU_IFF_DEVNUM) &&
-			    (atoi(usb_bus->dirname) != dif->bus ||
-			    dev->devnum != dif->devnum))
-				continue;
-			if (!count_dfu_interfaces(dev))
-				continue;
+		int retval;
+		dev = list[i];
+		libusb_get_device_descriptor(list[i], &desc);
 
-			retval = action(dev, user);
-			if (retval)
-				return retval;
+		if (dif && (dif->flags &
+		    (DFU_IFF_VENDOR|DFU_IFF_PRODUCT)) &&
+		    (desc.idVendor != dif->vendor ||
+		    desc.idProduct != dif->product))
+			continue;
+		if (dif && (dif->flags & DFU_IFF_DEVNUM) &&
+		    (bnum != dif->bus || dnum != dif->devnum))
+			continue;
+		if (!count_dfu_interfaces(dev))
+			continue;
+
+		retval = action(dev, user);
+		if (retval) {
+			libusb_free_device_list(list, 0);
+			return retval;
 		}
 	}
+	libusb_free_device_list(list, 0);
 	return 0;
 }
 
 
-static int found_dfu_device(struct usb_device *dev, void *user)
+static int found_dfu_device(struct libusb_device *dev, void *user)
 {
 	struct dfu_if *dif = user;
 
@@ -281,7 +299,7 @@ static int get_first_dfu_device(struct dfu_if *dif)
 }
 
 
-static int count_one_dfu_device(struct usb_device *dev, void *user)
+static int count_one_dfu_device(struct libusb_device *dev, void *user)
 {
 	int *num = user;
 
@@ -302,16 +320,20 @@ static int count_dfu_devices(struct dfu_if *dif)
 
 static int list_dfu_interfaces(void)
 {
-	struct usb_bus *usb_bus;
-	struct usb_device *dev;
+	libusb_device **list;
+	libusb_device *dev;
+	ssize_t num_devs, i;
 
 	/* Walk the tree and find our device. */
-	for (usb_bus = usb_get_busses(); NULL != usb_bus;
-	     usb_bus = usb_bus->next ) {
-		for (dev = usb_bus->devices; NULL != dev; dev = dev->next) {
-			find_dfu_if(dev, &print_dfu_if, NULL);
-		}
+	dev = NULL;
+	num_devs = libusb_get_device_list(NULL, &list);
+
+	for (i = 0; i < num_devs; ++i) {
+		dev = list[i];
+		find_dfu_if(dev, &print_dfu_if, NULL);
 	}
+
+	libusb_free_device_list(list, 1);
 	return 0;
 }
 
@@ -367,18 +389,23 @@ static int resolve_device_path(struct dfu_if *dif)
 #endif /* !HAVE_USBPATH_H */
 
 /* Look for descriptor in the configuration descriptor output */
-static int usb_get_extra_descriptor(usb_dev_handle *udev, unsigned char type,
+static int usb_get_extra_descriptor(struct dfu_if *dfu_if, unsigned char type,
 			unsigned char index, void *resbuf, int size)
 {
-	char *cbuf;
+	unsigned char *cbuf;
 	int desclen, conflen, smallest;
 	int ret;
+	int config_index;
 	int p = 0;
 	int foundlen = 0;
+	struct libusb_config_descriptor *config;
 
-	conflen = (usb_device(udev))->config->wTotalLength;
+	libusb_get_configuration(dfu_if->dev_handle, &config_index);
+	libusb_get_config_descriptor(dfu_if->dev, config_index, &config);
+
+	conflen = config->wTotalLength;
 	cbuf = malloc(conflen);
-	ret = usb_get_descriptor(udev, USB_DT_CONFIG, index, cbuf, conflen);
+	ret = libusb_get_descriptor(dfu_if->dev_handle, LIBUSB_DT_CONFIG, index, cbuf, conflen);
 	if (ret < conflen) {
 		fprintf(stderr, "Warning: failed to retrieve complete"
 			"configuration descriptor\n");
@@ -397,8 +424,10 @@ static int usb_get_extra_descriptor(usb_dev_handle *udev, unsigned char type,
 	free(cbuf);
 	if (foundlen > 1)
 		return foundlen;
+
+	libusb_free_config_descriptor(config);
 	/* try to retrieve it through usb_get_descriptor directly */
-	return usb_get_descriptor(udev, type, index, resbuf, size);
+	return libusb_get_descriptor(dfu_if->dev_handle, type, index, resbuf, size);
 }
 
 static void help(void)
@@ -462,6 +491,7 @@ int main(int argc, char **argv)
 	enum mode mode = MODE_NONE;
 	struct dfu_status status;
 	struct usb_dfu_func_descriptor func_dfu;
+	libusb_context *ctx;
 	char *filename = NULL;
 	char *alt_name = NULL; /* query alt name if non-NULL */
 	char *end;
@@ -476,10 +506,11 @@ int main(int argc, char **argv)
 	host_page_size = getpagesize();
 	memset(dif, 0, sizeof(*dif));
 
-	usb_init();
-	//usb_set_debug(255);
-	usb_find_busses();
-	usb_find_devices();
+	ret = libusb_init(&ctx);
+	if (ret) {
+		fprintf(stderr, "unable to initialize libusb: %i\n", ret);
+		return EXIT_FAILURE;
+	}
 
 	while (1) {
 		int c, option_index = 0;
@@ -499,7 +530,7 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			if (verbose) {
-				usb_set_debug(255);
+				libusb_set_debug(ctx, 255);
 			}
 			verbose = 1;
 			break;
@@ -601,12 +632,12 @@ int main(int argc, char **argv)
 	if (!get_first_dfu_device(dif))
 		exit(3);
 
-	/* We have exactly one device. Its usb_device is now in dif->dev */
+	/* We have exactly one device. Its libusb_device is now in dif->dev */
 
 	printf("Opening DFU USB device... ");
-	dif->dev_handle = usb_open(dif->dev);
+	libusb_open(dif->dev, &dif->dev_handle);
 	if (!dif->dev_handle) {
-		fprintf(stderr, "Cannot open device: %s\n", usb_strerror());
+		fprintf(stderr, "Cannot open device \n");
 		exit(1);
 	}
 
@@ -627,23 +658,20 @@ int main(int argc, char **argv)
 		/* FIXME: check if the selected device really has only one */
 
 		printf("Claiming USB DFU Runtime Interface...\n");
-		if (usb_claim_interface(_rt_dif.dev_handle, _rt_dif.interface) < 0) {
-			fprintf(stderr, "Cannot claim interface %d: %s\n",
-				_rt_dif.interface,
-				usb_strerror());
+		if (libusb_claim_interface(_rt_dif.dev_handle, _rt_dif.interface) < 0) {
+			fprintf(stderr, "Cannot claim interface %d\n",
+				_rt_dif.interface);
 			exit(1);
 		}
 
-		if (usb_set_altinterface(_rt_dif.dev_handle, 0) < 0) {
-			fprintf(stderr, "Cannot set alt interface: %s\n",
-				usb_strerror());
+		if (libusb_set_interface_alt_setting(_rt_dif.dev_handle, _rt_dif.interface, 0) < 0) {
+			fprintf(stderr, "Cannot set alt interface\n");
 			exit(1);
 		}
 
 		printf("Determining device status: ");
 		if (dfu_get_status(_rt_dif.dev_handle, _rt_dif.interface, &status ) < 0) {
-			fprintf(stderr, "error get_status: %s\n",
-				usb_strerror());
+			fprintf(stderr, "error get_status\n");
 			exit(1);
 		}
 		printf("state = %s, status = %d\n", 
@@ -658,25 +686,21 @@ int main(int argc, char **argv)
 			       "detach request...\n");
 			if (dfu_detach(_rt_dif.dev_handle, 
 				       _rt_dif.interface, 1000) < 0) {
-				fprintf(stderr, "error detaching: %s\n",
-					usb_strerror());
+				fprintf(stderr, "error detaching\n");
 				exit(1);
 				break;
 			}
 			printf("Resetting USB...\n");
-			ret = usb_reset(_rt_dif.dev_handle);
+			ret = libusb_reset_device(_rt_dif.dev_handle);
 			if (ret < 0 && ret != -ENODEV)
-				fprintf(stderr,
-					"error resetting after detach: %s\n", 
-					usb_strerror());
+				fprintf(stderr, "error resetting after detach\n");
 			sleep(2);
 			break;
 		case DFU_STATE_dfuERROR:
 			printf("dfuERROR, clearing status\n");
 			if (dfu_clear_status(_rt_dif.dev_handle,
 					     _rt_dif.interface) < 0) {
-				fprintf(stderr, "error clear_status: %s\n",
-					usb_strerror());
+				fprintf(stderr, "error clear_status\n");
 				exit(1);
 				break;
 			}
@@ -689,8 +713,8 @@ int main(int argc, char **argv)
 		}
 
 		/* now we need to re-scan the bus and locate our device */
-		if (usb_find_devices() < 2)
-			printf("not at least 2 device changes found ?!?\n");
+//		if (usb_find_devices() < 2)
+//			printf("not at least 2 device changes found ?!?\n");
 
 		if (dif->flags & DFU_IFF_PATH) {
 			ret = resolve_device_path(dif);
@@ -721,10 +745,9 @@ int main(int argc, char **argv)
 			exit(3);
 
 		printf("Opening USB Device...\n");
-		dif->dev_handle = usb_open(dif->dev);
+		libusb_open(dif->dev, &dif->dev_handle);
 		if (!dif->dev_handle) {
-			fprintf(stderr, "Cannot open device: %s\n",
-				usb_strerror());
+			fprintf(stderr, "Cannot open device\n");
 			exit(1);
 		}
 	} else {
@@ -771,29 +794,26 @@ dfustate:
 #if 0
 	printf("Setting Configuration %u...\n", dif->configuration);
 	if (usb_set_configuration(dif->dev_handle, dif->configuration) < 0) {
-		fprintf(stderr, "Cannot set configuration: %s\n",
-			usb_strerror());
+		fprintf(stderr, "Cannot set configuration\n");
 		exit(1);
 	}
 #endif
 	printf("Claiming USB DFU Interface...\n");
-	if (usb_claim_interface(dif->dev_handle, dif->interface) < 0) {
-		fprintf(stderr, "Cannot claim interface: %s\n",
-			usb_strerror());
+	if (libusb_claim_interface(dif->dev_handle, dif->interface) < 0) {
+		fprintf(stderr, "Cannot claim interface\n");
 		exit(1);
 	}
 
 	printf("Setting Alternate Setting #%d ...\n", dif->altsetting);
-	if (usb_set_altinterface(dif->dev_handle, dif->altsetting) < 0) {
-		fprintf(stderr, "Cannot set alternate interface: %s\n",
-			usb_strerror());
+	if (libusb_set_interface_alt_setting(dif->dev_handle, dif->interface, dif->altsetting) < 0) {
+		fprintf(stderr, "Cannot set alternate interface\n");
 		exit(1);
 	}
 
 status_again:
 	printf("Determining device status: ");
 	if (dfu_get_status(dif->dev_handle, dif->interface, &status ) < 0) {
-		fprintf(stderr, "error get_status: %s\n", usb_strerror());
+		fprintf(stderr, "error get_status\n");
 		exit(1);
 	}
 	printf("state = %s, status = %d\n",
@@ -810,8 +830,7 @@ status_again:
 	case DFU_STATE_dfuERROR:
 		printf("dfuERROR, clearing status\n");
 		if (dfu_clear_status(dif->dev_handle, dif->interface) < 0) {
-			fprintf(stderr, "error clear_status: %s\n",
-				usb_strerror());
+			fprintf(stderr, "error clear_status\n");
 			exit(1);
 		}
 		goto status_again;
@@ -820,8 +839,7 @@ status_again:
 	case DFU_STATE_dfuUPLOAD_IDLE:
 		printf("aborting previous incomplete transfer\n");
 		if (dfu_abort(dif->dev_handle, dif->interface) < 0) {
-			fprintf(stderr, "can't send DFU_ABORT: %s\n",
-				usb_strerror());
+			fprintf(stderr, "can't send DFU_ABORT\n");
 			exit(1);
 		}
 		goto status_again;
@@ -833,11 +851,11 @@ status_again:
 
 	if (!transfer_size) {
 		/* Obtain DFU functional descriptor */
-		ret = usb_get_extra_descriptor(dif->dev_handle, USB_DT_DFU,
+		ret = usb_get_extra_descriptor(dif, USB_DT_DFU,
 				dif->interface, &func_dfu, sizeof(func_dfu));
 		if (ret < 0) {
 			fprintf(stderr, "Error obtaining DFU functional "
-				"descriptor: %s\n", usb_strerror());
+				"descriptor\n");
 		} else {
 			transfer_size = get_int16_le(&func_dfu.wTransferSize);
 			printf("Device returned transfer size %i\n",
@@ -856,8 +874,10 @@ status_again:
 		printf("Limited transfer size to %i\n", transfer_size);
 	}
 	/* DFU specification */
-	if (transfer_size < dif->dev->descriptor.bMaxPacketSize0) {
-		transfer_size = dif->dev->descriptor.bMaxPacketSize0;
+	struct libusb_device_descriptor desc;
+	libusb_get_device_descriptor(dif->dev, &desc);
+	if (transfer_size < desc.bMaxPacketSize0) {
+		transfer_size = desc.bMaxPacketSize0;
 		printf("Adjusted transfer size to %i\n", transfer_size);
 	}
 
@@ -894,13 +914,12 @@ status_again:
 
 	if (final_reset) {
 		if (dfu_detach(dif->dev_handle, dif->interface, 1000) < 0) {
-			fprintf(stderr, "can't detach: %s\n", usb_strerror());
+			fprintf(stderr, "can't detach\n");
 		}
 		printf("Resetting USB to switch back to runtime mode\n");
-		ret = usb_reset(dif->dev_handle);
+		ret = libusb_reset_device(dif->dev_handle);
 		if (ret < 0 && ret != -ENODEV) {
-			fprintf(stderr, "error resetting after download: %s\n", 
-			usb_strerror());
+			fprintf(stderr, "error resetting after download\n");
 		}
 	}
 

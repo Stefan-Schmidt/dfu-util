@@ -29,7 +29,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include <usb.h>
+#include <libusb.h>
 
 #include "config.h"
 #include "dfu.h"
@@ -42,11 +42,11 @@
 #define O_BINARY 0
 #endif
 
-int dfuload_do_upload(struct usb_dev_handle *usb_handle, int interface,
+int dfuload_do_upload(libusb_device_handle *usb_handle, int interface,
 		      int xfer_size, const char *fname)
 {
 	int ret, fd, total_bytes = 0;
-	char *buf = malloc(xfer_size);
+	unsigned char *buf = malloc(xfer_size);
 
 	if (!buf)
 		return -ENOMEM;
@@ -101,12 +101,12 @@ out_free:
 
 #define PROGRESS_BAR_WIDTH 50
 
-int dfuload_do_dnload(struct usb_dev_handle *usb_handle, int interface,
+int dfuload_do_dnload(libusb_device_handle *usb_handle, int interface,
 		      int xfer_size, const char *fname)
 {
 	int ret, fd, bytes_sent = 0;
 	unsigned int bytes_per_hash, hashes = 0;
-	char *buf = malloc(xfer_size);
+	unsigned char *buf = malloc(xfer_size);
 	struct stat st;
 	struct dfu_status dst;
 
