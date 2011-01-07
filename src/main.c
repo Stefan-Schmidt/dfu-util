@@ -395,19 +395,22 @@ static int usb_get_extra_descriptor(struct dfu_if *dfu_if, unsigned char type,
 	unsigned char *cbuf;
 	int desclen, conflen, smallest;
 	int ret;
-	int config_index;
 	int p = 0;
 	int foundlen = 0;
 	struct libusb_config_descriptor *config;
 
-	libusb_get_configuration(dfu_if->dev_handle, &config_index);
-	libusb_get_config_descriptor(dfu_if->dev, config_index, &config);
+	ret = libusb_get_active_config_descriptor(dfu_if->dev, &config);
+	if (ret) {
+		fprintf(stderr, "Error: failed libusb_get_active_config_descriptor()\n");
+		return -1;
+	}
 
 	conflen = config->wTotalLength;
+	libusb_free_config_descriptor(config);
 	cbuf = malloc(conflen);
 	ret = libusb_get_descriptor(dfu_if->dev_handle, LIBUSB_DT_CONFIG, index, cbuf, conflen);
 	if (ret < conflen) {
-		fprintf(stderr, "Warning: failed to retrieve complete"
+		fprintf(stderr, "Warning: failed to retrieve complete "
 			"configuration descriptor\n");
 		conflen = ret;
 	}
@@ -425,7 +428,6 @@ static int usb_get_extra_descriptor(struct dfu_if *dfu_if, unsigned char type,
 	if (foundlen > 1)
 		return foundlen;
 
-	libusb_free_config_descriptor(config);
 	/* try to retrieve it through usb_get_descriptor directly */
 	return libusb_get_descriptor(dfu_if->dev_handle, type, index, resbuf, size);
 }
