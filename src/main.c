@@ -130,7 +130,8 @@ static int find_dfu_if(libusb_device *dev, int (*handler)(struct dfu_if *, void 
 						desc.idVendor;
 					dfu_if->product =
 						desc.idProduct;
-					dfu_if->configuration = cfg_idx;
+					dfu_if->configuration = cfg->
+							bConfigurationValue;
 					dfu_if->interface =
 						intf->bInterfaceNumber;
 					dfu_if->altsetting =
@@ -167,7 +168,7 @@ static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 	int if_name_str_idx;
 	unsigned char name[MAX_STR_LEN+1] = "UNDEFINED";
 
-	libusb_get_config_descriptor(dev, dfu_if->configuration, &cfg);
+	libusb_get_config_descriptor_by_value(dev, dfu_if->configuration, &cfg);
 
 	if_name_str_idx = cfg->interface[dfu_if->interface]
 				.altsetting[dfu_if->altsetting].iInterface;
@@ -198,7 +199,7 @@ static int alt_by_name(struct dfu_if *dfu_if, void *v)
 	int if_name_str_idx;
 	unsigned char name[MAX_STR_LEN+1] = "UNDEFINED";
 
-	libusb_get_config_descriptor(dev, dfu_if->configuration, &cfg);
+	libusb_get_config_descriptor_by_value(dev, dfu_if->configuration, &cfg);
 
 	if_name_str_idx = cfg->interface[dfu_if->interface]
 				.altsetting[dfu_if->altsetting].iInterface;
@@ -795,7 +796,7 @@ dfustate:
 
 #if 0
 	printf("Setting Configuration %u...\n", dif->configuration);
-	if (usb_set_configuration(dif->dev_handle, dif->configuration) < 0) {
+	if (libusb_set_configuration(dif->dev_handle, dif->configuration) < 0) {
 		fprintf(stderr, "Cannot set configuration\n");
 		exit(1);
 	}
