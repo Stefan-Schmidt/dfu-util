@@ -163,14 +163,18 @@ int dfuload_do_dnload(struct usb_dev_handle *usb_handle, int interface,
 				fprintf(stderr, "Error during download get_status\n");
 				goto out_close;
 			}
+
+			if (dst.bState == DFU_STATE_dfuDNLOAD_IDLE ||
+					dst.bState == DFU_STATE_dfuERROR)
+				break;
+
 			/* Wait while device executes flashing */
 			if (quirks & QUIRK_POLLTIMEOUT)
 				usleep(DEFAULT_POLLTIMEOUT * 1000);
 			else
 				usleep(dst.bwPollTimeout * 1000);
 
-		} while (dst.bState != DFU_STATE_dfuDNLOAD_IDLE &&
-			 dst.bState != DFU_STATE_dfuERROR);
+		} while (1);
 		if (dst.bStatus != DFU_STATUS_OK) {
 			printf(" failed!\n");
 			printf("state(%u) = %s, status(%u) = %s\n", dst.bState,
