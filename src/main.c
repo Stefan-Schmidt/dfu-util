@@ -380,7 +380,7 @@ static int usb_get_extra_descriptor(usb_dev_handle *udev, unsigned char type,
 	cbuf = malloc(conflen);
 	ret = usb_get_descriptor(udev, USB_DT_CONFIG, index, cbuf, conflen);
 	if (ret < conflen) {
-		fprintf(stderr, "Warning: failed to retrieve complete"
+		fprintf(stderr, "Warning: failed to retrieve complete "
 			"configuration descriptor\n");
 		conflen = ret;
 	}
