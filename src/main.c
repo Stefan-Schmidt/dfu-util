@@ -406,6 +406,7 @@ static void help(void)
 	printf("Usage: dfu-util [options] ...\n"
 		"  -h --help\t\t\tPrint this help message\n"
 		"  -V --version\t\t\tPrint the version number\n"
+		"  -v --verbose\t\t\tPrint verbose debug statements\n"
 		"  -l --list\t\t\tList the currently attached DFU capable USB devices\n"
 		"  -d --device vendor:product\tSpecify Vendor/Product ID of DFU device\n"
 		"  -p --path bus-port. ... .port\tSpecify path to DFU device\n"
