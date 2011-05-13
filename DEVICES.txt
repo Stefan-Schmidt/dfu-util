@@ -12,3 +12,4 @@ Products using DFU
 - OpenPCD (sam7dfu)
 - Openmoko Neo 1973 and Freerunner (u-boot with DFU patches)
 - Leaflabs Maple
+- ATUSB from Qi Hardware
