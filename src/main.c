@@ -147,8 +147,9 @@ static int find_dfu_if(libusb_device *dev, int (*handler)(struct dfu_if *, void 
 						return rc;
 				}
 			}
-		libusb_free_config_descriptor(cfg);
 		}
+
+		libusb_free_config_descriptor(cfg);
 	}
 
 	return 0;
