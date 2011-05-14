@@ -696,7 +696,7 @@ int main(int argc, char **argv)
 			}
 			printf("Resetting USB...\n");
 			ret = libusb_reset_device(_rt_dif.dev_handle);
-			if (ret < 0 && ret != -ENODEV)
+			if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND)
 				fprintf(stderr, "error resetting after detach\n");
 			sleep(2);
 			break;
@@ -922,7 +922,7 @@ status_again:
 		}
 		printf("Resetting USB to switch back to runtime mode\n");
 		ret = libusb_reset_device(dif->dev_handle);
-		if (ret < 0 && ret != -ENODEV) {
+		if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND) {
 			fprintf(stderr, "error resetting after download\n");
 		}
 	}
