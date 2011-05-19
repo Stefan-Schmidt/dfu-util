@@ -750,8 +750,6 @@ dfustate:
 		dif->altsetting = n-1;
 	}
 
-	print_dfu_if(dif, NULL);
-
 	num_ifs = count_dfu_interfaces(dif->dev);
 	if (num_ifs < 0) {
 		fprintf(stderr, "No DFU Interface after RESET?!?\n");
@@ -768,6 +766,8 @@ dfustate:
 			num_ifs);
 		exit(1);
 	}
+
+	print_dfu_if(dif, NULL);
 
 #if 0
 	printf("Setting Configuration %u...\n", dif->configuration);
