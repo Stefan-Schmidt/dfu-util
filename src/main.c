@@ -52,30 +52,6 @@ unsigned short get_int16_le(const void *p)
 int debug;
 static int verbose = 0;
 
-#define DFU_IFF_DFU		0x0001	/* DFU Mode, (not Runtime) */
-#define DFU_IFF_VENDOR		0x0100
-#define DFU_IFF_PRODUCT		0x0200
-#define DFU_IFF_CONFIG		0x0400
-#define DFU_IFF_IFACE		0x0800
-#define DFU_IFF_ALT		0x1000
-#define DFU_IFF_DEVNUM		0x2000
-#define DFU_IFF_PATH		0x4000
-
-struct dfu_if {
-	u_int16_t vendor;
-	u_int16_t product;
-	u_int8_t configuration;
-	u_int8_t interface;
-	u_int8_t altsetting;
-	int bus;
-	u_int8_t devnum;
-	const char *path;
-	unsigned int flags;
-	libusb_device *dev;
-
-	libusb_device_handle *dev_handle;
-};
-
 static int _get_first_cb(struct dfu_if *dif, void *v)
 {
 	struct dfu_if *v_dif = v;
