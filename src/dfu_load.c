@@ -26,7 +26,6 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <libusb.h>
@@ -37,26 +36,15 @@
 #include "dfu_load.h"
 #include "quirks.h"
 
-/* ugly hack for Win32 */
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-
-int dfuload_do_upload(libusb_device_handle *usb_handle, int interface,
-		      int xfer_size, const char *fname)
+int dfuload_do_upload(struct dfu_if *dif, int xfer_size, int fd)
 {
-	int ret, fd, total_bytes = 0;
-	unsigned char *buf = malloc(xfer_size);
+	int total_bytes = 0;
+	unsigned char *buf;
+	int ret;
 
+	buf = malloc(xfer_size);
 	if (!buf)
 		return -ENOMEM;
-
-	fd = open(fname, O_WRONLY|O_CREAT|O_EXCL, 0644);
-	if (fd < 0) {
-		perror(fname);
-		ret = fd;
-		goto out_free;
-	}
 
 	printf("bytes_per_hash=%u\n", xfer_size);
 	printf("Copying data from DFU device to PC\n");
@@ -65,17 +53,17 @@ int dfuload_do_upload(libusb_device_handle *usb_handle, int interface,
 
 	while (1) {
 		int rc, write_rc;
-		rc = dfu_upload(usb_handle, interface, xfer_size, buf);
+		rc = dfu_upload(dif->dev_handle, dif->interface, xfer_size, buf);
 		if (rc < 0) {
 			ret = rc;
-			goto out_close;
+			goto out_free;
 		}
 		write_rc = write(fd, buf, rc);
 		if (write_rc < rc) {
 			fprintf(stderr, "Short file write: %s\n",
 				strerror(errno));
 			ret = total_bytes;
-			goto out_close;
+			goto out_free;
 		}
 		total_bytes += rc;
 		if (rc < xfer_size) {
@@ -91,8 +79,6 @@ int dfuload_do_upload(libusb_device_handle *usb_handle, int interface,
 	printf("] finished!\n");
 	fflush(stdout);
 
-out_close:
-	close(fd);
 out_free:
 	free(buf);
 
@@ -101,35 +87,29 @@ out_free:
 
 #define PROGRESS_BAR_WIDTH 50
 
-int dfuload_do_dnload(libusb_device_handle *usb_handle, int interface,
-		      int xfer_size, const char *fname)
+int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, int fd)
 {
-	int ret, fd, bytes_sent = 0;
+	int bytes_sent = 0;
 	unsigned int bytes_per_hash, hashes = 0;
-	unsigned char *buf = malloc(xfer_size);
+	unsigned char *buf;
 	struct stat st;
 	struct dfu_status dst;
+	int ret;
 
+	buf = malloc(xfer_size);
 	if (!buf)
 		return -ENOMEM;
 
-	fd = open(fname, O_RDONLY|O_BINARY);
-	if (fd < 0) {
-		perror(fname);
-		ret = fd;
-		goto out_free;
-	}
-
 	ret = fstat(fd, &st);
 	if (ret < 0) {
-		perror(fname);
-		goto out_close;
+		perror(NULL);
+		goto out_free;
 	}
 
 	if (st.st_size <= 0 /* + DFU_HDR */) {
 		fprintf(stderr, "File seems a bit too small...\n");
 		ret = -EINVAL;
-		goto out_close;	
+		goto out_free;	
 	}
 
 	bytes_per_hash = st.st_size / PROGRESS_BAR_WIDTH;
@@ -147,21 +127,21 @@ int dfuload_do_dnload(libusb_device_handle *usb_handle, int interface,
 
 		ret = read(fd, buf, xfer_size);
 		if (ret < 0) {
-			perror(fname);
-			goto out_close;
+			perror(NULL);
+			goto out_free;
 		}
-		ret = dfu_download(usb_handle, interface, ret, ret ? buf : NULL);
+		ret = dfu_download(dif->dev_handle, dif->interface, ret, ret ? buf : NULL);
 		if (ret < 0) {
 			fprintf(stderr, "Error during download\n");
-			goto out_close;
+			goto out_free;
 		}
 		bytes_sent += ret;
 
 		do {
-			ret = dfu_get_status(usb_handle, interface, &dst);
+			ret = dfu_get_status(dif->dev_handle, dif->interface, &dst);
 			if (ret < 0) {
 				fprintf(stderr, "Error during download get_status\n");
-				goto out_close;
+				goto out_free;
 			}
 
 			if (dst.bState == DFU_STATE_dfuDNLOAD_IDLE ||
@@ -181,7 +161,7 @@ int dfuload_do_dnload(libusb_device_handle *usb_handle, int interface,
 				dfu_state_to_string(dst.bState), dst.bStatus,
 				dfu_status_to_string(dst.bStatus));
 			ret = -1;
-			goto out_close;
+			goto out_free;
 		}
 
 		hashes_todo = (bytes_sent / bytes_per_hash) - hashes;
@@ -192,10 +172,10 @@ int dfuload_do_dnload(libusb_device_handle *usb_handle, int interface,
 	}
 
 	/* send one zero sized download request to signalize end */
-	ret = dfu_download(usb_handle, interface, 0, NULL);
+	ret = dfu_download(dif->dev_handle, dif->interface, 0, NULL);
 	if (ret < 0) {
 		fprintf(stderr, "Error sending completion packet\n");
-		goto out_close;
+		goto out_free;
 	}
 
 	printf("] finished!\n");
@@ -203,10 +183,10 @@ int dfuload_do_dnload(libusb_device_handle *usb_handle, int interface,
 
 get_status:
 	/* Transition to MANIFEST_SYNC state */
-	ret = dfu_get_status(usb_handle, interface, &dst);
+	ret = dfu_get_status(dif->dev_handle, dif->interface, &dst);
 	if (ret < 0) {
 		fprintf(stderr, "unable to read DFU status\n");
-		goto out_close;
+		goto out_free;
 	}
 	printf("state(%u) = %s, status(%u) = %s\n", dst.bState,
 		dfu_state_to_string(dst.bState), dst.bStatus,
@@ -228,14 +208,13 @@ get_status:
 	}
 #if 0
 	printf("Resetting USB...\n");
-	if (usb_reset(usb_handle) < 0) {
+	if (usb_reset(dif->dev_handle) < 0) {
 		fprintf(stderr, "error resetting after download: %s\n",
 			usb_strerror());
 	}
 #endif
 	printf("Done!\n");
-out_close:
-	close(fd);
+
 out_free:
 	free(buf);
 

@@ -28,6 +28,7 @@
 #include <getopt.h>
 #include <libusb.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include "dfu.h"
 #include "usb_dfu.h"
@@ -39,6 +40,11 @@
 
 #ifdef HAVE_USBPATH_H
 #include <usbpath.h>
+#endif
+
+/* ugly hack for Win32 */
+#ifndef O_BINARY
+#define O_BINARY 0
 #endif
 
 /* define a portable function for reading a 16bit little-endian word */
@@ -459,6 +465,7 @@ int main(int argc, char **argv)
 	struct usb_dfu_func_descriptor func_dfu;
 	libusb_context *ctx;
 	char *filename = NULL;
+	int fd;
 	char *alt_name = NULL; /* query alt name if non-NULL */
 	char *end;
 	int final_reset = 0;
@@ -862,14 +869,24 @@ status_again:
 
 	switch (mode) {
 	case MODE_UPLOAD:
-		if (dfuload_do_upload(dif->dev_handle, dif->interface,
-				  transfer_size, filename) < 0)
+		fd = open(filename, O_WRONLY|O_CREAT|O_EXCL, 0644);
+		if (fd < 0) {
+			perror(filename);
 			exit(1);
+		}
+		if (dfuload_do_upload(dif, transfer_size, fd) < 0)
+			exit(1);
+		close(fd);
 		break;
 	case MODE_DOWNLOAD:
-		if (dfuload_do_dnload(dif->dev_handle, dif->interface,
-				  transfer_size, filename) < 0)
+		fd = open(filename, O_RDONLY|O_BINARY);
+		if (fd < 0) {
+			perror(filename);
 			exit(1);
+		}
+		if (dfuload_do_dnload(dif, transfer_size, fd) < 0)
+			exit(1);
+		close(fd);
 		break;
 	default:
 		fprintf(stderr, "Unsupported mode: %u\n", mode);
