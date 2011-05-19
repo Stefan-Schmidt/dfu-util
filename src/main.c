@@ -61,11 +61,6 @@ static int verbose = 0;
 #define DFU_IFF_DEVNUM		0x2000
 #define DFU_IFF_PATH		0x4000
 
-struct usb_vendprod {
-	u_int16_t vendor;
-	u_int16_t product;
-};
-
 struct dfu_if {
 	u_int16_t vendor;
 	u_int16_t product;
@@ -263,10 +258,11 @@ static int iterate_dfu_devices(struct dfu_if *dif,
 		dev = list[i];
 		libusb_get_device_descriptor(list[i], &desc);
 
-		if (dif && (dif->flags &
-		    (DFU_IFF_VENDOR|DFU_IFF_PRODUCT)) &&
-		    (desc.idVendor != dif->vendor ||
-		    desc.idProduct != dif->product))
+		if (dif && (dif->flags & DFU_IFF_VENDOR) &&
+		    desc.idVendor != dif->vendor)
+			continue;
+		if (dif && (dif->flags & DFU_IFF_PRODUCT) &&
+		    desc.idProduct != dif->product)
 			continue;
 		if (dif && (dif->flags & DFU_IFF_DEVNUM) &&
 		    (bnum != dif->bus || dnum != dif->devnum))
@@ -339,25 +335,16 @@ static int list_dfu_interfaces(void)
 	return 0;
 }
 
-static int parse_vendprod(struct usb_vendprod *vp, const char *str)
+static void parse_vendprod(u_int16_t *vendor, u_int16_t *product, const char *str)
 {
-	unsigned long vend, prod;
 	const char *colon;
 
+	*vendor = strtoul(str, NULL, 16);
 	colon = strchr(str, ':');
-	if (!colon || strlen(colon) < 2)
-		return -EINVAL;
-
-	vend = strtoul(str, NULL, 16);
-	prod = strtoul(colon+1, NULL, 16);
-
-	if (vend > 0xffff || prod > 0xffff)
-		return -EINVAL;
-
-	vp->vendor = vend;
-	vp->product = prod;
-
-	return 0;
+	if (colon)
+		*product = strtoul(colon + 1, NULL, 16);
+	else
+		*product = 0;
 }
 
 
@@ -485,7 +472,6 @@ enum mode {
 
 int main(int argc, char **argv)
 {
-	struct usb_vendprod vendprod;
 	struct dfu_if _rt_dif, _dif, *dif = &_dif;
 	int num_devs;
 	int num_ifs;
@@ -543,15 +529,13 @@ int main(int argc, char **argv)
 			exit(0);
 			break;
 		case 'd':
-			/* Parse device */
-			if (parse_vendprod(&vendprod, optarg) < 0) {
-				fprintf(stderr, "unable to parse `%s' as a vendor:product\n", optarg);
-
-				exit(2);
-			}
-			dif->vendor = vendprod.vendor;
-			dif->product = vendprod.product;
-			dif->flags |= (DFU_IFF_VENDOR | DFU_IFF_PRODUCT);
+			/* Parse device ID */
+			parse_vendprod(&dif->vendor, &dif->product, optarg);
+			printf("Filter on vendor = 0x%04x product = 0x%04x\n", dif->vendor, dif->product);
+			if (dif->vendor)
+				dif->flags |= DFU_IFF_VENDOR;
+			if (dif->product)
+				dif->flags |= DFU_IFF_PRODUCT;
 			break;
 		case 'p':
 			/* Parse device path */
