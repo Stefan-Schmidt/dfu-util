@@ -24,15 +24,6 @@
 #include <libusb.h>
 #include "dfu.h"
 
-/* DFU commands */
-#define DFU_DETACH      0
-#define DFU_DNLOAD      1
-#define DFU_UPLOAD      2
-#define DFU_GETSTATUS   3
-#define DFU_CLRSTATUS   4
-#define DFU_GETSTATE    5
-#define DFU_ABORT       6
-
 #define INVALID_DFU_TIMEOUT -1
 
 static int dfu_timeout = INVALID_DFU_TIMEOUT;
