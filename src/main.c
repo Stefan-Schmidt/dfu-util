@@ -32,6 +32,7 @@
 
 #include "dfu.h"
 #include "usb_dfu.h"
+#include "dfu_file.h"
 #include "dfu_load.h"
 #include "quirks.h"
 #ifdef HAVE_CONFIG_H
@@ -464,8 +465,7 @@ int main(int argc, char **argv)
 	struct dfu_status status;
 	struct usb_dfu_func_descriptor func_dfu;
 	libusb_context *ctx;
-	char *filename = NULL;
-	int fd;
+	struct dfu_file file;
 	char *alt_name = NULL; /* query alt name if non-NULL */
 	char *end;
 	int final_reset = 0;
@@ -478,6 +478,7 @@ int main(int argc, char **argv)
 
 	host_page_size = getpagesize();
 	memset(dif, 0, sizeof(*dif));
+	file.name = NULL;
 
 	ret = libusb_init(&ctx);
 	if (ret) {
@@ -557,11 +558,11 @@ int main(int argc, char **argv)
 			break;
 		case 'U':
 			mode = MODE_UPLOAD;
-			filename = optarg;
+			file.name = optarg;
 			break;
 		case 'D':
 			mode = MODE_DOWNLOAD;
-			filename = optarg;
+			file.name = optarg;
 			break;
 		case 'R':
 			final_reset = 1;
@@ -578,7 +579,7 @@ int main(int argc, char **argv)
 		exit(2);
 	}
 
-	if (!filename) {
+	if (!file.name) {
 		fprintf(stderr, "You need to specify a filename to -D or -U\n");
 		help();
 		exit(2);
@@ -869,24 +870,44 @@ status_again:
 
 	switch (mode) {
 	case MODE_UPLOAD:
-		fd = open(filename, O_WRONLY|O_CREAT|O_EXCL, 0644);
-		if (fd < 0) {
-			perror(filename);
+		file.fd = open(file.name, O_WRONLY|O_CREAT|O_EXCL, 0644);
+		if (file.fd < 0) {
+			perror(file.name);
 			exit(1);
 		}
-		if (dfuload_do_upload(dif, transfer_size, fd) < 0)
+		if (dfuload_do_upload(dif, transfer_size, file.fd) < 0)
 			exit(1);
-		close(fd);
+		close(file.fd);
 		break;
 	case MODE_DOWNLOAD:
-		fd = open(filename, O_RDONLY|O_BINARY);
-		if (fd < 0) {
-			perror(filename);
+		file.fd = open(file.name, O_RDONLY|O_BINARY);
+		if (file.fd < 0) {
+			perror(file.name);
 			exit(1);
 		}
-		if (dfuload_do_dnload(dif, transfer_size, fd) < 0)
+		ret = parse_dfu_suffix(&file);
+		if (ret < 0)
 			exit(1);
-		close(fd);
+		if (ret == 0) {
+			fprintf(stderr, "Warning: File has no DFU suffix\n");
+		} else if (file.bcdDFU != 0x0100) {
+			fprintf(stderr, "Unsupported DFU file revision "
+				"%04x\n", file.bcdDFU);
+			exit(1);
+		}
+		if (file.idVendor != 0xffff &&
+		    dif->vendor != file.idVendor) {
+			fprintf(stderr, "Warning: File vendor ID %04x does "
+				"not match device\n", file.idVendor);
+		}
+		if (file.idProduct != 0xffff &&
+		    dif->product != file.idProduct) {
+			fprintf(stderr, "Warning: File product ID %04x does "
+				"not match device\n", file.idProduct);
+		}
+		if (dfuload_do_dnload(dif, transfer_size, file.fd) < 0)
+			exit(1);
+		close(file.fd);
 		break;
 	default:
 		fprintf(stderr, "Unsupported mode: %u\n", mode);
