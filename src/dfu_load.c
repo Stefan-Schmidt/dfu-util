@@ -33,10 +33,11 @@
 #include "config.h"
 #include "dfu.h"
 #include "usb_dfu.h"
+#include "dfu_file.h"
 #include "dfu_load.h"
 #include "quirks.h"
 
-int dfuload_do_upload(struct dfu_if *dif, int xfer_size, int fd)
+int dfuload_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 {
 	int total_bytes = 0;
 	unsigned char *buf;
@@ -58,7 +59,7 @@ int dfuload_do_upload(struct dfu_if *dif, int xfer_size, int fd)
 			ret = rc;
 			goto out_free;
 		}
-		write_rc = write(fd, buf, rc);
+		write_rc = write(file.fd, buf, rc);
 		if (write_rc < rc) {
 			fprintf(stderr, "Short file write: %s\n",
 				strerror(errno));
@@ -87,12 +88,11 @@ out_free:
 
 #define PROGRESS_BAR_WIDTH 50
 
-int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, int fd)
+int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 {
 	int bytes_sent = 0;
 	unsigned int bytes_per_hash, hashes = 0;
 	unsigned char *buf;
-	struct stat st;
 	struct dfu_status dst;
 	int ret;
 
@@ -100,34 +100,29 @@ int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, int fd)
 	if (!buf)
 		return -ENOMEM;
 
-	ret = fstat(fd, &st);
-	if (ret < 0) {
-		perror(NULL);
-		goto out_free;
-	}
-
-	if (st.st_size <= 0 /* + DFU_HDR */) {
-		fprintf(stderr, "File seems a bit too small...\n");
-		ret = -EINVAL;
-		goto out_free;	
-	}
-
-	bytes_per_hash = st.st_size / PROGRESS_BAR_WIDTH;
+	bytes_per_hash = (file.size - file.suffixlen) / PROGRESS_BAR_WIDTH;
 	if (bytes_per_hash == 0)
 		bytes_per_hash = 1;
 	printf("bytes_per_hash=%u\n", bytes_per_hash);
 #if 0
-	read(fd, DFU_HDR);
+	read(file.fd, DFU_HDR);
 #endif
 	printf("Copying data from PC to DFU device\n");
 	printf("Starting download: [");
 	fflush(stdout);
-	while (bytes_sent < st.st_size /* - DFU_HDR */) {
+	while (bytes_sent < file.size - file.suffixlen) {
 		int hashes_todo;
+		int bytes_left;
+		int chunk_size;
 
-		ret = read(fd, buf, xfer_size);
+		bytes_left = file.size - file.suffixlen - bytes_sent;
+		if (bytes_left < xfer_size)
+			chunk_size = bytes_left;
+		else
+			chunk_size = xfer_size;
+		ret = read(file.fd, buf, chunk_size);
 		if (ret < 0) {
-			perror(NULL);
+			perror(file.name);
 			goto out_free;
 		}
 		ret = dfu_download(dif->dev_handle, dif->interface, ret, ret ? buf : NULL);

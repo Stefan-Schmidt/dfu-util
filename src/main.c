@@ -875,7 +875,7 @@ status_again:
 			perror(file.name);
 			exit(1);
 		}
-		if (dfuload_do_upload(dif, transfer_size, file.fd) < 0)
+		if (dfuload_do_upload(dif, transfer_size, file) < 0)
 			exit(1);
 		close(file.fd);
 		break;
@@ -905,7 +905,7 @@ status_again:
 			fprintf(stderr, "Warning: File product ID %04x does "
 				"not match device\n", file.idProduct);
 		}
-		if (dfuload_do_dnload(dif, transfer_size, file.fd) < 0)
+		if (dfuload_do_dnload(dif, transfer_size, file) < 0)
 			exit(1);
 		close(file.fd);
 		break;
