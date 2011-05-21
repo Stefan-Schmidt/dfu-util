@@ -57,7 +57,7 @@ unsigned short get_int16_le(const void *p)
 }
 
 int debug;
-static int verbose = 0;
+int verbose = 0;
 
 static int _get_first_cb(struct dfu_if *dif, void *v)
 {

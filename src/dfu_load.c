@@ -37,6 +37,8 @@
 #include "dfu_load.h"
 #include "quirks.h"
 
+extern int verbose;
+
 int dfuload_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 {
 	int total_bytes = 0;
@@ -82,6 +84,8 @@ int dfuload_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 
 out_free:
 	free(buf);
+	if (verbose)
+		printf("Received a total of %i bytes\n", total_bytes);
 
 	return ret;
 }
@@ -175,6 +179,8 @@ int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 
 	printf("] finished!\n");
 	fflush(stdout);
+	if (verbose)
+		printf("Sent a total of %i bytes\n", bytes_sent);
 
 get_status:
 	/* Transition to MANIFEST_SYNC state */
