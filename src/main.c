@@ -59,8 +59,13 @@ unsigned short get_int16_le(const void *p)
     return ( cp[0] ) | ( ((unsigned short)cp[1]) << 8 );
 }
 
-/* Find a DFU interface (and altsetting) in a given device */
-static int find_dfu_if(libusb_device *dev, int (*handler)(struct dfu_if *, void *), void *v)
+/* Find DFU interfaces in a given device.
+ * Iterate through all DFU interfaces and their alternate settings
+ * and call the passed handler function on each setting until handler
+ * returns non-zero. */
+static int find_dfu_if(libusb_device *dev,
+		       int (*handler)(struct dfu_if *, void *),
+		       void *v)
 {
 	struct libusb_device_descriptor desc;
 	struct libusb_config_descriptor *cfg;
@@ -70,10 +75,8 @@ static int find_dfu_if(libusb_device *dev, int (*handler)(struct dfu_if *, void 
 	int cfg_idx, intf_idx, alt_idx;
 	int rc;
 
-	libusb_get_device_descriptor(dev, &desc);
-
 	memset(dfu_if, 0, sizeof(*dfu_if));
-
+	libusb_get_device_descriptor(dev, &desc);
 	for (cfg_idx = 0; cfg_idx < desc.bNumConfigurations;
 	     cfg_idx++) {
 		libusb_get_config_descriptor(dev, cfg_idx, &cfg);
@@ -127,12 +130,15 @@ static int _get_first_cb(struct dfu_if *dif, void *v)
 {
 	struct dfu_if *v_dif = v;
 
+	/* Copy everything except the device handle.
+	 * This depends heavily on this member being last! */
 	memcpy(v_dif, dif, sizeof(*v_dif)-sizeof(libusb_device_handle *));
 
 	/* return a value that makes find_dfu_if return immediately */
 	return 1;
 }
 
+/* Fills in dif with the first found DFU interface */
 static int get_first_dfu_if(struct dfu_if *dif)
 {
 	return find_dfu_if(dif->dev, &_get_first_cb, (void *) dif);
@@ -171,14 +177,13 @@ static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 	return 0;
 }
 
+/* Walk the device tree and print out DFU devices */
 static int list_dfu_interfaces(void)
 {
 	libusb_device **list;
 	libusb_device *dev;
 	ssize_t num_devs, i;
 
-	/* Walk the tree and find our device. */
-	dev = NULL;
 	num_devs = libusb_get_device_list(NULL, &list);
 
 	for (i = 0; i < num_devs; ++i) {
@@ -207,8 +212,9 @@ static int alt_by_name(struct dfu_if *dfu_if, void *v)
 		libusb_open(dfu_if->dev, &dfu_if->dev_handle);
 	if (!dfu_if->dev_handle)
 		return 0;
-	if (libusb_get_string_descriptor_ascii(dfu_if->dev_handle, if_name_str_idx, name,
-	     MAX_STR_LEN) < 0)
+	if (libusb_get_string_descriptor_ascii(dfu_if->dev_handle,
+					       if_name_str_idx, name,
+					       MAX_STR_LEN) < 0)
 		return 0; /* should we return an error here ? */
 	if (strcmp((char *)name, v))
 		return 0;
@@ -318,7 +324,8 @@ static int count_dfu_devices(struct dfu_if *dif)
 }
 
 
-static void parse_vendprod(u_int16_t *vendor, u_int16_t *product, const char *str)
+static void parse_vendprod(u_int16_t *vendor, u_int16_t *product,
+			   const char *str)
 {
 	const char *colon;
 
@@ -410,7 +417,8 @@ static int usb_get_extra_descriptor(struct dfu_if *dfu_if, unsigned char type,
 		return foundlen;
 
 	/* try to retrieve it through usb_get_descriptor directly */
-	return libusb_get_descriptor(dfu_if->dev_handle, type, index, resbuf, size);
+	return libusb_get_descriptor(dfu_if->dev_handle, type, index, resbuf,
+				     size);
 }
 
 static void help(void)
