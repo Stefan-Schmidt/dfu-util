@@ -623,7 +623,7 @@ int main(int argc, char **argv)
 	/* find set of quirks for this device */
 	set_quirks(_rt_dif.vendor, _rt_dif.product);
 
-	if (!_rt_dif.flags & DFU_IFF_DFU) {
+	if (!(_rt_dif.flags & DFU_IFF_DFU)) {
 		/* In the 'first round' during runtime mode, there can only be one
 		* DFU Interface descriptor according to the DFU Spec. */
 
