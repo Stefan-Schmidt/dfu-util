@@ -48,25 +48,15 @@
 #define O_BINARY 0
 #endif
 
+int debug;
+int verbose = 0;
+
 /* define a portable function for reading a 16bit little-endian word */
 unsigned short get_int16_le(const void *p)
 {
     const unsigned char *cp = p;
 
     return ( cp[0] ) | ( ((unsigned short)cp[1]) << 8 );
-}
-
-int debug;
-int verbose = 0;
-
-static int _get_first_cb(struct dfu_if *dif, void *v)
-{
-	struct dfu_if *v_dif = v;
-
-	memcpy(v_dif, dif, sizeof(*v_dif)-sizeof(libusb_device_handle *));
-
-	/* return a value that makes find_dfu_if return immediately */
-	return 1;
 }
 
 /* Find a DFU interface (and altsetting) in a given device */
@@ -133,6 +123,16 @@ static int find_dfu_if(libusb_device *dev, int (*handler)(struct dfu_if *, void 
 	return 0;
 }
 
+static int _get_first_cb(struct dfu_if *dif, void *v)
+{
+	struct dfu_if *v_dif = v;
+
+	memcpy(v_dif, dif, sizeof(*v_dif)-sizeof(libusb_device_handle *));
+
+	/* return a value that makes find_dfu_if return immediately */
+	return 1;
+}
+
 static int get_first_dfu_if(struct dfu_if *dif)
 {
 	return find_dfu_if(dif->dev, &_get_first_cb, (void *) dif);
@@ -168,6 +168,25 @@ static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 	       dfu_if->altsetting, name);
 
 	libusb_free_config_descriptor(cfg);
+	return 0;
+}
+
+static int list_dfu_interfaces(void)
+{
+	libusb_device **list;
+	libusb_device *dev;
+	ssize_t num_devs, i;
+
+	/* Walk the tree and find our device. */
+	dev = NULL;
+	num_devs = libusb_get_device_list(NULL, &list);
+
+	for (i = 0; i < num_devs; ++i) {
+		dev = list[i];
+		find_dfu_if(dev, &print_dfu_if, NULL);
+	}
+
+	libusb_free_device_list(list, 1);
 	return 0;
 }
 
@@ -298,25 +317,6 @@ static int count_dfu_devices(struct dfu_if *dif)
 	return num_found;
 }
 
-
-static int list_dfu_interfaces(void)
-{
-	libusb_device **list;
-	libusb_device *dev;
-	ssize_t num_devs, i;
-
-	/* Walk the tree and find our device. */
-	dev = NULL;
-	num_devs = libusb_get_device_list(NULL, &list);
-
-	for (i = 0; i < num_devs; ++i) {
-		dev = list[i];
-		find_dfu_if(dev, &print_dfu_if, NULL);
-	}
-
-	libusb_free_device_list(list, 1);
-	return 0;
-}
 
 static void parse_vendprod(u_int16_t *vendor, u_int16_t *product, const char *str)
 {
