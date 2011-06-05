@@ -360,33 +360,41 @@ static int resolve_device_path(struct dfu_if *dif)
 
 #endif /* !HAVE_USBPATH_H */
 
-/* Look for descriptor in the configuration descriptor output */
+/* Look for descriptor in the configuration descriptor hierarchy */
 static int usb_get_extra_descriptor(struct dfu_if *dfu_if, unsigned char type,
 			unsigned char index, void *resbuf, int size)
 {
 	unsigned char *cbuf;
-	int desclen, conflen, smallest;
+	int conflen;
 	int ret;
 	int p = 0;
 	int foundlen = 0;
 	struct libusb_config_descriptor *config;
 
+	/* Get the total length of the configuration descriptors */
 	ret = libusb_get_active_config_descriptor(dfu_if->dev, &config);
 	if (ret) {
-		fprintf(stderr, "Error: failed libusb_get_active_config_descriptor()\n");
+		fprintf(stderr, "Error: failed "
+				 "libusb_get_active_config_descriptor()\n");
 		return -1;
 	}
-
 	conflen = config->wTotalLength;
 	libusb_free_config_descriptor(config);
+
+	/* Suck in the whole configuration descriptor list */
 	cbuf = malloc(conflen);
-	ret = libusb_get_descriptor(dfu_if->dev_handle, LIBUSB_DT_CONFIG, index, cbuf, conflen);
+	ret = libusb_get_descriptor(dfu_if->dev_handle, LIBUSB_DT_CONFIG,
+				    index, cbuf, conflen);
 	if (ret < conflen) {
 		fprintf(stderr, "Warning: failed to retrieve complete "
 			"configuration descriptor\n");
 		conflen = ret;
 	}
+
+	/* Iterate through the descriptors */
 	while (p + 1 < conflen) {
+		int desclen, smallest;
+
 		desclen = (int) cbuf[p];
 		if (cbuf[p + 1] == type) {
 			smallest = desclen < size ? desclen : size;
@@ -397,6 +405,7 @@ static int usb_get_extra_descriptor(struct dfu_if *dfu_if, unsigned char type,
 		p += desclen;
 	}
 	free(cbuf);
+	/* A descriptor is at least 2 bytes long */
 	if (foundlen > 1)
 		return foundlen;
 
