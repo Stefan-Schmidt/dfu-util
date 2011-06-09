@@ -100,6 +100,7 @@ struct dfu_if {
     u_int8_t devnum;
     const char *path;
     unsigned int flags;
+    unsigned int count;
     libusb_device *dev;
     libusb_device_handle *dev_handle;
 };

@@ -144,6 +144,47 @@ static int get_first_dfu_if(struct dfu_if *dif)
 	return find_dfu_if(dif->dev, &_get_first_cb, (void *) dif);
 }
 
+static int _check_match_cb(struct dfu_if *dif, void *v)
+{
+	struct dfu_if *v_dif = v;
+
+	if (v_dif->flags & DFU_IFF_IFACE && 
+	    dif->interface != v_dif->interface)
+		return 0;
+	if (v_dif->flags & DFU_IFF_ALT &&
+	    dif->altsetting != v_dif->altsetting)
+		return 0;
+	return _get_first_cb(dif, v);
+}
+
+/* Fills in dif from the matching DFU interface/altsetting */
+static int get_matching_dfu_if(struct dfu_if *dif)
+{
+	return find_dfu_if(dif->dev, &_check_match_cb, (void *) dif);
+}
+
+static int _count_match_cb(struct dfu_if *dif, void *v)
+{
+	struct dfu_if *v_dif = v;
+
+	if (v_dif->flags & DFU_IFF_IFACE && 
+	    dif->interface != v_dif->interface)
+		return 0;
+	if (v_dif->flags & DFU_IFF_ALT &&
+	    dif->altsetting != v_dif->altsetting)
+		return 0;
+	v_dif->count++;
+	return 0;
+}
+
+/* Count matching DFU interface/altsetting */
+static int count_matching_dfu_if(struct dfu_if *dif)
+{
+	dif->count = 0;
+	find_dfu_if(dif->dev, &_count_match_cb, (void *) dif);
+	return dif->count;
+}
+
 #define MAX_STR_LEN 64
 
 static int print_dfu_if(struct dfu_if *dfu_if, void *v)
@@ -761,23 +802,22 @@ dfustate:
 		dif->altsetting = n-1;
 	}
 
-	num_ifs = count_dfu_interfaces(dif->dev);
+	num_ifs = count_matching_dfu_if(dif);
 	if (num_ifs < 0) {
-		fprintf(stderr, "No DFU Interface after RESET?!?\n");
+		fprintf(stderr, "No matching DFU Interface after RESET?!?\n");
 		exit(1);
-	} else if (num_ifs == 1) {
-		if (!get_first_dfu_if(dif)) {
-			fprintf(stderr, "Can't find the single available "
-				"DFU IF\n");
-			exit(1);
-		}
-	} else if (num_ifs > 1 && !(dif->flags & (DFU_IFF_IFACE|DFU_IFF_ALT))) {
-		fprintf(stderr, "We have %u DFU Interfaces/Altsettings, "
-			"you have to specify one via --intf / --alt options\n",
-			num_ifs);
+	} else if (num_ifs > 1 ) {
+		fprintf(stderr, "We have %u DFU Interfaces/Altsettings,"
+			" you have to specify one via --intf / --alt"
+			" options\n", num_ifs);
 		exit(1);
 	}
 
+	if (!get_matching_dfu_if(dif)) {
+		fprintf(stderr, "Can't find the matching DFU interface/"
+			"altsetting\n");
+		exit(1);
+	}
 	print_dfu_if(dif, NULL);
 
 #if 0
