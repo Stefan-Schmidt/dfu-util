@@ -720,6 +720,8 @@ int main(int argc, char **argv)
 				exit(1);
 				break;
 			}
+			libusb_release_interface(_rt_dif.dev_handle,
+						 _rt_dif.interface);
 			printf("Resetting USB...\n");
 			ret = libusb_reset_device(_rt_dif.dev_handle);
 			if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND)
@@ -741,6 +743,9 @@ int main(int argc, char **argv)
 			goto dfustate;
 			break;
 		}
+		libusb_release_interface(_rt_dif.dev_handle,
+					 _rt_dif.interface);
+		libusb_close(_rt_dif.dev_handle);
 
 		/* now we need to re-scan the bus and locate our device */
 //		if (usb_find_devices() < 2)
@@ -982,6 +987,7 @@ status_again:
 		}
 	}
 
+	libusb_close(dif->dev_handle);
 	exit(0);
 }
 
