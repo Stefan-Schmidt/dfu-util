@@ -898,12 +898,12 @@ status_again:
 		if (file.idVendor != 0xffff &&
 		    dif->vendor != file.idVendor) {
 			fprintf(stderr, "Warning: File vendor ID %04x does "
-				"not match device\n", file.idVendor);
+				"not match device %04x\n", file.idVendor, dif->vendor);
 		}
 		if (file.idProduct != 0xffff &&
 		    dif->product != file.idProduct) {
 			fprintf(stderr, "Warning: File product ID %04x does "
-				"not match device\n", file.idProduct);
+				"not match device %04x\n", file.idProduct, dif->product);
 		}
 		if (dfuload_do_dnload(dif, transfer_size, file) < 0)
 			exit(1);
