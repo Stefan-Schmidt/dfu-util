@@ -7,5 +7,7 @@ dfu_util_SOURCES = main.c \
 		dfu.c \
 		dfu.h \
 		usb_dfu.h \
+		dfu_file.c \
+		dfu_file.h \
 		quirks.c \
 		quirks.h

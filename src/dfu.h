@@ -21,7 +21,7 @@
 #ifndef __DFU_H__
 #define __DFU_H__
 
-#include <usb.h>
+#include <libusb.h>
 #include "usb_dfu.h"
 
 /* DFU states */
@@ -56,6 +56,24 @@
 #define DFU_STATUS_ERROR_UNKNOWN        0x0e
 #define DFU_STATUS_ERROR_STALLEDPKT     0x0f
 
+/* DFU commands */
+#define DFU_DETACH      0
+#define DFU_DNLOAD      1
+#define DFU_UPLOAD      2
+#define DFU_GETSTATUS   3
+#define DFU_CLRSTATUS   4
+#define DFU_GETSTATE    5
+#define DFU_ABORT       6
+
+/* DFU interface */
+#define DFU_IFF_DFU             0x0001  /* DFU Mode, (not Runtime) */
+#define DFU_IFF_VENDOR          0x0100
+#define DFU_IFF_PRODUCT         0x0200
+#define DFU_IFF_CONFIG          0x0400
+#define DFU_IFF_IFACE           0x0800
+#define DFU_IFF_ALT             0x1000
+#define DFU_IFF_DEVNUM          0x2000
+#define DFU_IFF_PATH            0x4000
 
 /* This is based off of DFU_GETSTATUS
  *
@@ -72,27 +90,42 @@ struct dfu_status {
     unsigned char iString;
 };
 
+struct dfu_if {
+    u_int16_t vendor;
+    u_int16_t product;
+    u_int8_t configuration;
+    u_int8_t interface;
+    u_int8_t altsetting;
+    int bus;
+    u_int8_t devnum;
+    const char *path;
+    unsigned int flags;
+    unsigned int count;
+    libusb_device *dev;
+    libusb_device_handle *dev_handle;
+};
+
 void dfu_init( const int timeout );
 void dfu_debug( const int level );
-int dfu_detach( struct usb_dev_handle *device,
+int dfu_detach( libusb_device_handle *device,
                 const unsigned short interface,
                 const unsigned short timeout );
-int dfu_download( struct usb_dev_handle *device,
+int dfu_download( libusb_device_handle *device,
                   const unsigned short interface,
                   const unsigned short length,
-                  char* data );
-int dfu_upload( struct usb_dev_handle *device,
+                  unsigned char* data );
+int dfu_upload( libusb_device_handle *device,
                 const unsigned short interface,
                 const unsigned short length,
-                char* data );
-int dfu_get_status( struct usb_dev_handle *device,
+                unsigned char* data );
+int dfu_get_status( libusb_device_handle *device,
                     const unsigned short interface,
                     struct dfu_status *status );
-int dfu_clear_status( struct usb_dev_handle *device,
+int dfu_clear_status( libusb_device_handle *device,
                       const unsigned short interface );
-int dfu_get_state( struct usb_dev_handle *device,
+int dfu_get_state( libusb_device_handle *device,
                    const unsigned short interface );
-int dfu_abort( struct usb_dev_handle *device,
+int dfu_abort( libusb_device_handle *device,
                const unsigned short interface );
 
 char* dfu_state_to_string( int state );

@@ -42,7 +42,7 @@ struct usb_dfu_func_descriptor {
 
 #define USB_DT_DFU_SIZE			9
 
-#define USB_TYPE_DFU		(USB_TYPE_CLASS|USB_RECIP_INTERFACE)
+#define USB_TYPE_DFU		(LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE)
 
 /* DFU class-specific requests (Section 3, DFU Rev 1.1) */
 #define USB_REQ_DFU_DETACH	0x00
