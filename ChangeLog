@@ -1,3 +1,12 @@
+0.4:
+	o Rework to use libusb-1.0 (Stefan Schmidt)
+	o DFU suffix support (Tormod Volden, Stefan Schmidt)
+	o Sspeed up DFU downloads directly into memory (Bernard Blackham)
+	o More flexible -d vid:pid parsing (Tormod Volden)
+	o Many bug fixes and cleanups
+
+2011-07-20: Stefan Schmidt <stefan@datenfreihafen.org>
+
 0.3:
 	o quirks: Add OpenOCD to the poll timeout quirk table.
 
