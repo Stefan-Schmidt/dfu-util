@@ -219,13 +219,13 @@ static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 }
 
 /* Walk the device tree and print out DFU devices */
-static int list_dfu_interfaces(void)
+static int list_dfu_interfaces(libusb_context *ctx)
 {
 	libusb_device **list;
 	libusb_device *dev;
 	ssize_t num_devs, i;
 
-	num_devs = libusb_get_device_list(NULL, &list);
+	num_devs = libusb_get_device_list(ctx, &list);
 
 	for (i = 0; i < num_devs; ++i) {
 		dev = list[i];
@@ -287,7 +287,7 @@ static int count_dfu_interfaces(libusb_device *dev)
 
 
 /* Iterate over all matching DFU capable devices within system */
-static int iterate_dfu_devices(struct dfu_if *dif,
+static int iterate_dfu_devices(libusb_context *ctx, struct dfu_if *dif,
     int (*action)(struct libusb_device *dev, void *user), void *user)
 {
 	struct libusb_device_descriptor desc;
@@ -296,7 +296,7 @@ static int iterate_dfu_devices(struct dfu_if *dif,
 	ssize_t num_devs, i;
 
 	dev = NULL;
-	num_devs = libusb_get_device_list(NULL, &list); // FIXME set context
+	num_devs = libusb_get_device_list(ctx, &list);
 
 	/* Walk the tree and find our device. */
 	for (i = 0; i < num_devs; ++i) {
@@ -340,9 +340,9 @@ static int found_dfu_device(struct libusb_device *dev, void *user)
 
 
 /* Find the first DFU-capable device, save it in dfu_if->dev */
-static int get_first_dfu_device(struct dfu_if *dif)
+static int get_first_dfu_device(libusb_context *ctx, struct dfu_if *dif)
 {
-	return iterate_dfu_devices(dif, found_dfu_device, dif);
+	return iterate_dfu_devices(ctx, dif, found_dfu_device, dif);
 }
 
 
@@ -356,11 +356,11 @@ static int count_one_dfu_device(struct libusb_device *dev, void *user)
 
 
 /* Count DFU capable devices within system */
-static int count_dfu_devices(struct dfu_if *dif)
+static int count_dfu_devices(libusb_context *ctx, struct dfu_if *dif)
 {
 	int num_found = 0;
 
-	iterate_dfu_devices(dif, count_one_dfu_device, &num_found);
+	iterate_dfu_devices(ctx, dif, count_one_dfu_device, &num_found);
 	return num_found;
 }
 
@@ -568,7 +568,7 @@ int main(int argc, char **argv)
 			verbose = 1;
 			break;
 		case 'l':
-			list_dfu_interfaces();
+			list_dfu_interfaces(ctx);
 			exit(0);
 			break;
 		case 'd':
@@ -646,7 +646,7 @@ int main(int argc, char **argv)
 
 	dfu_init(5000);
 
-	num_devs = count_dfu_devices(dif);
+	num_devs = count_dfu_devices(ctx, dif);
 	if (num_devs == 0) {
 		fprintf(stderr, "No DFU capable USB device found\n");
 		exit(1);
@@ -660,7 +660,7 @@ int main(int argc, char **argv)
 		       "device\n");
 		exit(3);
 	}
-	if (!get_first_dfu_device(dif))
+	if (!get_first_dfu_device(ctx, dif))
 		exit(3);
 
 	/* We have exactly one device. Its libusb_device is now in dif->dev */
@@ -767,7 +767,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		num_devs = count_dfu_devices(dif);
+		num_devs = count_dfu_devices(ctx, dif);
 		if (num_devs == 0) {
 			fprintf(stderr, "Lost device after RESET?\n");
 			exit(1);
@@ -777,7 +777,7 @@ int main(int argc, char **argv)
 				"then disconnect all but one device\n");
 			exit(1);
 		}
-		if (!get_first_dfu_device(dif))
+		if (!get_first_dfu_device(ctx, dif))
 			exit(3);
 
 		printf("Opening USB Device...\n");
@@ -989,6 +989,7 @@ status_again:
 	}
 
 	libusb_close(dif->dev_handle);
+	libusb_exit(ctx);
 	exit(0);
 }
 
