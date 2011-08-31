@@ -527,6 +527,7 @@ int main(int argc, char **argv)
 	libusb_context *ctx;
 	struct dfu_file file;
 	char *alt_name = NULL; /* query alt name if non-NULL */
+	unsigned char active_alt_name[MAX_STR_LEN+1];
 	char *end;
 	int final_reset = 0;
 	int ret;
@@ -824,6 +825,10 @@ dfustate:
 		exit(1);
 	}
 	print_dfu_if(dif, NULL);
+	if (get_alt_name(dif, active_alt_name) > 0)
+		dif->alt_name = active_alt_name;
+	else
+		dif->alt_name = NULL;
 
 #if 0
 	printf("Setting Configuration %u...\n", dif->configuration);
