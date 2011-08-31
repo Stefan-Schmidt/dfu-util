@@ -54,6 +54,10 @@ int verbose = 0;
 /* If we really have to guess (non-compliant devices) */
 #define DEFAULT_TRANSFER_SIZE 1024
 
+/* USB string descriptor should contain max 126 UTF-16 characters
+ * but 253 would even accomodate any UTF-8 encoding */
+#define MAX_DESC_STR_LEN 253
+
 /* define a portable function for reading a 16bit little-endian word */
 unsigned short get_int16_le(const void *p)
 {
@@ -188,8 +192,6 @@ static int count_matching_dfu_if(struct dfu_if *dif)
 	return dif->count;
 }
 
-#define MAX_STR_LEN 64
-
 /* Retrieves alternate interface name string.
  * Returns string length, or negative on error */
 static int get_alt_name(struct dfu_if *dfu_if, unsigned char *name)
@@ -213,7 +215,7 @@ static int get_alt_name(struct dfu_if *dfu_if, unsigned char *name)
 		if (dfu_if->dev_handle)
 			ret = libusb_get_string_descriptor_ascii(
 					dfu_if->dev_handle, alt_name_str_idx,
-					name, MAX_STR_LEN);
+					name, MAX_DESC_STR_LEN);
 	}
 	libusb_free_config_descriptor(cfg);
 	return ret;
@@ -221,7 +223,7 @@ static int get_alt_name(struct dfu_if *dfu_if, unsigned char *name)
 
 static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 {
-	unsigned char name[MAX_STR_LEN+1] = "UNDEFINED";
+	unsigned char name[MAX_DESC_STR_LEN+1] = "UNDEFINED";
 
 	get_alt_name(dfu_if, name);
 
@@ -254,7 +256,7 @@ static int list_dfu_interfaces(libusb_context *ctx)
 
 static int alt_by_name(struct dfu_if *dfu_if, void *v)
 {
-	unsigned char name[MAX_STR_LEN+1];
+	unsigned char name[MAX_DESC_STR_LEN+1];
 
 	if (get_alt_name(dfu_if, name) < 0)
 		return 0;
@@ -527,7 +529,7 @@ int main(int argc, char **argv)
 	libusb_context *ctx;
 	struct dfu_file file;
 	char *alt_name = NULL; /* query alt name if non-NULL */
-	unsigned char active_alt_name[MAX_STR_LEN+1];
+	unsigned char active_alt_name[MAX_DESC_STR_LEN+1];
 	char *end;
 	int final_reset = 0;
 	int ret;
