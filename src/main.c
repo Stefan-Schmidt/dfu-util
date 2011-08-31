@@ -293,31 +293,25 @@ static int count_dfu_interfaces(libusb_device *dev)
 static int iterate_dfu_devices(libusb_context *ctx, struct dfu_if *dif,
     int (*action)(struct libusb_device *dev, void *user), void *user)
 {
-	struct libusb_device_descriptor desc;
-	struct libusb_device *dev;
 	libusb_device **list;
 	ssize_t num_devs, i;
 
-	dev = NULL;
 	num_devs = libusb_get_device_list(ctx, &list);
-
-	/* Walk the tree and find our device. */
 	for (i = 0; i < num_devs; ++i) {
-		uint8_t bnum = libusb_get_bus_number(list[i]);
-		uint8_t dnum = libusb_get_device_address(list[i]);
-
 		int retval;
-		dev = list[i];
-		libusb_get_device_descriptor(list[i], &desc);
+		struct libusb_device_descriptor desc;
+		struct libusb_device *dev = list[i];
 
+		if (dif && (dif->flags & DFU_IFF_DEVNUM) &&
+		    (libusb_get_bus_number(dev) != dif->bus ||
+		     libusb_get_device_address(dev) != dif->devnum))
+			continue;
+		libusb_get_device_descriptor(dev, &desc);
 		if (dif && (dif->flags & DFU_IFF_VENDOR) &&
 		    desc.idVendor != dif->vendor)
 			continue;
 		if (dif && (dif->flags & DFU_IFF_PRODUCT) &&
 		    desc.idProduct != dif->product)
-			continue;
-		if (dif && (dif->flags & DFU_IFF_DEVNUM) &&
-		    (bnum != dif->bus || dnum != dif->devnum))
 			continue;
 		if (!count_dfu_interfaces(dev))
 			continue;
