@@ -190,34 +190,47 @@ static int count_matching_dfu_if(struct dfu_if *dif)
 
 #define MAX_STR_LEN 64
 
-static int print_dfu_if(struct dfu_if *dfu_if, void *v)
+/* Retrieves alternate interface name string.
+ * Returns string length, or negative on error */
+static int get_alt_name(struct dfu_if *dfu_if, unsigned char *name)
 {
 	libusb_device *dev = dfu_if->dev;
 	struct libusb_config_descriptor *cfg;
-	int if_name_str_idx;
-	unsigned char name[MAX_STR_LEN+1] = "UNDEFINED";
+	int alt_name_str_idx;
+	int ret;
 
-	libusb_get_config_descriptor_by_value(dev, dfu_if->configuration, &cfg);
+	ret = libusb_get_config_descriptor_by_value(dev, dfu_if->configuration,
+						    &cfg);
+	if (ret)
+		return ret;
 
-	if_name_str_idx = cfg->interface[dfu_if->interface]
-				.altsetting[dfu_if->altsetting].iInterface;
-	if (if_name_str_idx) {
+	alt_name_str_idx = cfg->interface[dfu_if->interface].
+			       altsetting[dfu_if->altsetting].iInterface;
+	ret = -1;
+	if (alt_name_str_idx) {
 		if (!dfu_if->dev_handle)
 			libusb_open(dfu_if->dev, &dfu_if->dev_handle);
 		if (dfu_if->dev_handle)
-			libusb_get_string_descriptor_ascii(dfu_if->dev_handle,
-					      if_name_str_idx, name,
-					      MAX_STR_LEN);
+			ret = libusb_get_string_descriptor_ascii(
+					dfu_if->dev_handle, alt_name_str_idx,
+					name, MAX_STR_LEN);
 	}
+	libusb_free_config_descriptor(cfg);
+	return ret;
+}
+
+static int print_dfu_if(struct dfu_if *dfu_if, void *v)
+{
+	unsigned char name[MAX_STR_LEN+1] = "UNDEFINED";
+
+	get_alt_name(dfu_if, name);
 
 	printf("Found %s: [0x%04x:0x%04x] devnum=%u, cfg=%u, intf=%u, "
 	       "alt=%u, name=\"%s\"\n", 
 	       dfu_if->flags & DFU_IFF_DFU ? "DFU" : "Runtime",
 	       dfu_if->vendor, dfu_if->product, dfu_if->devnum,
-		dfu_if->configuration, dfu_if->interface,
+	       dfu_if->configuration, dfu_if->interface,
 	       dfu_if->altsetting, name);
-
-	libusb_free_config_descriptor(cfg);
 	return 0;
 }
 
@@ -241,25 +254,10 @@ static int list_dfu_interfaces(libusb_context *ctx)
 
 static int alt_by_name(struct dfu_if *dfu_if, void *v)
 {
-	libusb_device *dev = dfu_if->dev;
-	struct libusb_config_descriptor *cfg;
-	int if_name_str_idx;
-	unsigned char name[MAX_STR_LEN+1] = "UNDEFINED";
+	unsigned char name[MAX_STR_LEN+1];
 
-	libusb_get_config_descriptor_by_value(dev, dfu_if->configuration, &cfg);
-
-	if_name_str_idx = cfg->interface[dfu_if->interface]
-				.altsetting[dfu_if->altsetting].iInterface;
-	if (!if_name_str_idx)
+	if (get_alt_name(dfu_if, name) < 0)
 		return 0;
-	if (!dfu_if->dev_handle)
-		libusb_open(dfu_if->dev, &dfu_if->dev_handle);
-	if (!dfu_if->dev_handle)
-		return 0;
-	if (libusb_get_string_descriptor_ascii(dfu_if->dev_handle,
-					       if_name_str_idx, name,
-					       MAX_STR_LEN) < 0)
-		return 0; /* should we return an error here ? */
 	if (strcmp((char *)name, v))
 		return 0;
 	/*
