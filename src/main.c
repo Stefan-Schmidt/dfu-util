@@ -51,6 +51,9 @@
 int debug;
 int verbose = 0;
 
+/* If we really have to guess (non-compliant devices) */
+#define DEFAULT_TRANSFER_SIZE 1024
+
 /* define a portable function for reading a 16bit little-endian word */
 unsigned short get_int16_le(const void *p)
 {
@@ -525,7 +528,6 @@ int main(int argc, char **argv)
 	int num_devs;
 	int num_ifs;
 	unsigned int transfer_size = 0;
-	unsigned int default_transfer_size = 1024;
 	unsigned int host_page_size;
 	enum mode mode = MODE_NONE;
 	struct dfu_status status;
@@ -904,7 +906,7 @@ status_again:
 	}
 	/* if returned zero or not detected (and not user specified) */
 	if (!transfer_size) {
-		transfer_size = default_transfer_size;
+		transfer_size = DEFAULT_TRANSFER_SIZE;
 		printf("Warning: Trying default transfer size %i\n",
 			transfer_size);
 	}
