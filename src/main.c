@@ -484,7 +484,12 @@ static void help(void)
 
 static void print_version(void)
 {
-	printf("dfu-util version %s\n", VERSION);
+	printf("dfu-util %s\n\n", VERSION);
+	printf("(C) 2005-2008 by Weston Schmidt, Harald Welte and OpenMoko Inc.\n"
+	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
+
+	printf("dfu-util does currently only support DFU version 1.0\n\n");
+
 }
 
 static struct option opts[] = {
@@ -508,6 +513,8 @@ static struct option opts[] = {
 
 enum mode {
 	MODE_NONE,
+	MODE_VERSION,
+	MODE_LIST,
 	MODE_UPLOAD,
 	MODE_DOWNLOAD,
 };
@@ -530,20 +537,9 @@ int main(int argc, char **argv)
 	int final_reset = 0;
 	int ret;
 
-	printf("dfu-util - (C) 2005-2008 by Weston Schmidt, Harald Welte and OpenMoko Inc.\n"
-	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
-
-	printf("dfu-util does currently only support DFU version 1.0\n\n");
-
 	host_page_size = getpagesize();
 	memset(dif, 0, sizeof(*dif));
 	file.name = NULL;
-
-	ret = libusb_init(&ctx);
-	if (ret) {
-		fprintf(stderr, "unable to initialize libusb: %i\n", ret);
-		return EXIT_FAILURE;
-	}
 
 	while (1) {
 		int c, option_index = 0;
@@ -558,18 +554,13 @@ int main(int argc, char **argv)
 			exit(0);
 			break;
 		case 'V':
-			print_version();
-			exit(0);
+			mode = MODE_VERSION;
 			break;
 		case 'v':
-			if (verbose) {
-				libusb_set_debug(ctx, 255);
-			}
-			verbose = 1;
+			verbose++;
 			break;
 		case 'l':
-			list_dfu_interfaces(ctx);
-			exit(0);
+			mode = MODE_LIST;
 			break;
 		case 'd':
 			/* Parse device ID */
@@ -632,16 +623,30 @@ int main(int argc, char **argv)
 		}
 	}
 
+	print_version();
+	if (mode == MODE_VERSION) {
+		exit(0);
+	}
+
 	if (mode == MODE_NONE) {
-		fprintf(stderr, "You need to specify one of -D or -U\n");
+		fprintf(stderr, "Error: You need to specify one of -D or -U\n\n");
 		help();
 		exit(2);
 	}
 
-	if (!file.name) {
-		fprintf(stderr, "You need to specify a filename to -D or -U\n");
-		help();
-		exit(2);
+	ret = libusb_init(&ctx);
+	if (ret) {
+		fprintf(stderr, "unable to initialize libusb: %i\n", ret);
+		return EXIT_FAILURE;
+	}
+
+	if (verbose > 1) {
+		libusb_set_debug(ctx, 255);
+	}
+
+	if (mode == MODE_LIST) {
+		list_dfu_interfaces(ctx);
+		exit(0);
 	}
 
 	dfu_init(5000);
