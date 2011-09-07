@@ -529,6 +529,7 @@ int main(int argc, char **argv)
 	libusb_context *ctx;
 	struct dfu_file file;
 	char *alt_name = NULL; /* query alt name if non-NULL */
+	char *device_id_filter = NULL;
 	unsigned char active_alt_name[MAX_DESC_STR_LEN+1];
 	char *end;
 	int final_reset = 0;
@@ -560,13 +561,7 @@ int main(int argc, char **argv)
 			mode = MODE_LIST;
 			break;
 		case 'd':
-			/* Parse device ID */
-			parse_vendprod(&dif->vendor, &dif->product, optarg);
-			printf("Filter on vendor = 0x%04x product = 0x%04x\n", dif->vendor, dif->product);
-			if (dif->vendor)
-				dif->flags |= DFU_IFF_VENDOR;
-			if (dif->product)
-				dif->flags |= DFU_IFF_PRODUCT;
+			device_id_filter = optarg;
 			break;
 		case 'p':
 			/* Parse device path */
@@ -629,6 +624,17 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Error: You need to specify one of -D or -U\n\n");
 		help();
 		exit(2);
+	}
+
+	if (device_id_filter) {
+		/* Parse device ID */
+		parse_vendprod(&dif->vendor, &dif->product, device_id_filter);
+		printf("Filter on vendor = 0x%04x product = 0x%04x\n",
+		       dif->vendor, dif->product);
+		if (dif->vendor)
+			dif->flags |= DFU_IFF_VENDOR;
+		if (dif->product)
+			dif->flags |= DFU_IFF_PRODUCT;
 	}
 
 	ret = libusb_init(&ctx);
