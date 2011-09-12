@@ -58,14 +58,6 @@ int verbose = 0;
  * but 253 would even accomodate any UTF-8 encoding */
 #define MAX_DESC_STR_LEN 253
 
-/* define a portable function for reading a 16bit little-endian word */
-unsigned short get_int16_le(const void *p)
-{
-    const unsigned char *cp = p;
-
-    return ( cp[0] ) | ( ((unsigned short)cp[1]) << 8 );
-}
-
 /* Find DFU interfaces in a given device.
  * Iterate through all DFU interfaces and their alternate settings
  * and call the passed handler function on each setting until handler
@@ -904,7 +896,7 @@ status_again:
 			fprintf(stderr, "Error obtaining DFU functional "
 				"descriptor\n");
 		} else {
-			transfer_size = get_int16_le(&func_dfu.wTransferSize);
+			transfer_size = libusb_le16_to_cpu(func_dfu.wTransferSize);
 			printf("Device returned transfer size %i\n",
 				transfer_size);
 		}
