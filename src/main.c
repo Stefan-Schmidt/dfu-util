@@ -227,7 +227,7 @@ static int print_dfu_if(struct dfu_if *dfu_if, void *v)
 
 	get_alt_name(dfu_if, name);
 
-	printf("Found %s: [0x%04x:0x%04x] devnum=%u, cfg=%u, intf=%u, "
+	printf("Found %s: [%04x:%04x] devnum=%u, cfg=%u, intf=%u, "
 	       "alt=%u, name=\"%s\"\n", 
 	       dfu_if->flags & DFU_IFF_DFU ? "DFU" : "Runtime",
 	       dfu_if->vendor, dfu_if->product, dfu_if->devnum,
