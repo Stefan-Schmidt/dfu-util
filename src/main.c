@@ -397,58 +397,138 @@ static int resolve_device_path(struct dfu_if *dif)
 
 #endif /* !HAVE_USBPATH_H */
 
-/* Look for descriptor in the configuration descriptor hierarchy */
-static int usb_get_extra_descriptor(struct dfu_if *dfu_if, unsigned char type,
-			unsigned char index, void *resbuf, int size)
+/* Look for a descriptor in a concatenated descriptor list
+ * Will return desc_index'th match of given descriptor type
+ * Returns length of found descriptor, limited to res_size */
+static int find_descriptor(const unsigned char *desc_list, int list_len,
+			   uint8_t desc_type, uint8_t desc_index,
+			   uint8_t *res_buf, int res_size)
 {
-	unsigned char *cbuf;
-	int conflen;
-	int ret;
 	int p = 0;
-	int foundlen = 0;
+	int hit = 0;
+	
+	while (p + 1 < list_len) {
+		int desclen;
+
+		desclen = (int) desc_list[p];
+		if (desclen == 0) {
+			fprintf(stderr, "Error: Invalid descriptor list\n");
+			return -1;
+		}
+		if (desc_list[p + 1] == desc_type && hit++ == desc_index) {
+			if (desclen > res_size)
+				desclen = res_size;
+			if (p + desclen > list_len)
+				desclen = list_len - p;
+			memcpy(res_buf, &desc_list[p], desclen);
+			return desclen;
+		}
+		p += (int) desc_list[p];
+	}
+	return 0;
+}
+
+/* Look for a descriptor in the active configuration
+ * Will also find extra descriptors which are normally
+ * not returned by the standard libusb_get_descriptor() */
+static int usb_get_any_descriptor(struct dfu_if *dfu_if,
+				    uint8_t desc_type,
+				    uint8_t desc_index,
+				    unsigned char *resbuf, int res_len)
+{
 	struct libusb_config_descriptor *config;
+	int ret;
+	uint16_t conflen;
+	unsigned char *cbuf;
+
+	/* We need to talk to the device, so it must be open */
+	if (!dfu_if->dev_handle)
+		return -1;
 
 	/* Get the total length of the configuration descriptors */
 	ret = libusb_get_active_config_descriptor(dfu_if->dev, &config);
-	if (ret) {
-		fprintf(stderr, "Error: failed "
-				 "libusb_get_active_config_descriptor()\n");
+	if (ret == LIBUSB_ERROR_NOT_FOUND) {
+		fprintf(stderr, "Error: Device is unconfigured\n");
 		return -1;
+	} else if (ret) {
+		fprintf(stderr, "Error: failed "
+			"libusb_get_active_config_descriptor()\n");
+		exit(1);
 	}
 	conflen = config->wTotalLength;
 	libusb_free_config_descriptor(config);
 
-	/* Suck in the whole configuration descriptor list */
+	/* Suck in the configuration descriptor list from device */
 	cbuf = malloc(conflen);
 	ret = libusb_get_descriptor(dfu_if->dev_handle, LIBUSB_DT_CONFIG,
-				    index, cbuf, conflen);
+				    desc_index, cbuf, conflen);
 	if (ret < conflen) {
 		fprintf(stderr, "Warning: failed to retrieve complete "
-			"configuration descriptor\n");
+			"configuration descriptor, got %i/%i\n",
+			ret, conflen);
 		conflen = ret;
 	}
-
-	/* Iterate through the descriptors */
-	while (p + 1 < conflen) {
-		int desclen, smallest;
-
-		desclen = (int) cbuf[p];
-		if (cbuf[p + 1] == type) {
-			smallest = desclen < size ? desclen : size;
-			memcpy(resbuf, &cbuf[p], smallest);
-			foundlen = smallest;
-			break;
-		}
-		p += desclen;
-	}
+	/* Search through the configuration descriptor list */
+	ret = find_descriptor(cbuf, conflen, desc_type, desc_index,
+			      resbuf, res_len);
 	free(cbuf);
-	/* A descriptor is at least 2 bytes long */
-	if (foundlen > 1)
-		return foundlen;
 
-	/* try to retrieve it through usb_get_descriptor directly */
-	return libusb_get_descriptor(dfu_if->dev_handle, type, index, resbuf,
-				     size);
+	/* A descriptor must be at least 2 bytes long */
+	if (ret > 1) {
+		if (verbose)
+			printf("Found descriptor in complete configuration "
+			       "descriptor list\n");
+		return ret;
+	}
+
+	/* Finally try to retrieve it requesting the device directly
+	 * This is not supported on all devices for non-standard types */
+	return libusb_get_descriptor(dfu_if->dev_handle, desc_type, desc_index,
+				     resbuf, res_len);
+}
+
+/* Get cached extra descriptor from libusb, from active configuration
+ * Returns length of found descriptor */
+static int get_cached_extra_descriptor(struct dfu_if *dfu_if,
+				 uint8_t desc_type, uint8_t desc_index,
+				 unsigned char *resbuf, int res_len)
+{
+	struct libusb_config_descriptor *cfg;
+	const unsigned char *extra;
+	int extra_len;
+	int ret;
+	int alt;
+
+	ret = libusb_get_active_config_descriptor(dfu_if->dev, &cfg);
+	if (ret == LIBUSB_ERROR_NOT_FOUND) {
+		fprintf(stderr, "Error: Device is unconfigured\n");
+		return -1;
+	} else if (ret) {
+		fprintf(stderr, "Error: failed "
+			"libusb_get_config_descriptor_by_value()\n");
+		exit(1);
+	}
+
+	/* Extra descriptors can be shared between alternate settings but
+	 * libusb may attach them to one setting. Therefore go through all.
+	 * Note that desc_index is per alternate setting, hits will not be
+	 * counted from one to another */
+	for (alt = 0; alt < cfg->interface[dfu_if->interface].num_altsetting;
+	     alt++) {
+		extra = cfg->interface[dfu_if->interface].
+				altsetting[alt].extra;
+		extra_len = cfg->interface[dfu_if->interface].
+				altsetting[alt].extra_length;
+		if (extra_len > 1)
+			ret = find_descriptor(extra, extra_len, desc_type,
+					      desc_index, resbuf, res_len);
+		if (ret > 1)
+			break;
+	}
+	libusb_free_config_descriptor(cfg);
+	if (ret < 2 && verbose)
+		printf("Did not find cached descriptor\n");
+	return ret;
 }
 
 static void help(void)
@@ -517,7 +597,7 @@ int main(int argc, char **argv)
 	unsigned int host_page_size;
 	enum mode mode = MODE_NONE;
 	struct dfu_status status;
-	struct usb_dfu_func_descriptor func_dfu;
+	struct usb_dfu_func_descriptor func_dfu, func_dfu_rt;
 	libusb_context *ctx;
 	struct dfu_file file;
 	char *alt_name = NULL; /* query alt name if non-NULL */
@@ -682,6 +762,26 @@ int main(int argc, char **argv)
 	/* find set of quirks for this device */
 	set_quirks(_rt_dif.vendor, _rt_dif.product);
 
+	/* Obtain run-time DFU functional descriptor without asking device
+	 * E.g. Freerunner does not like to be requested at this point */
+	ret = get_cached_extra_descriptor(&_rt_dif, USB_DT_DFU, 0,
+				    (unsigned char *) &func_dfu_rt,
+				    sizeof(func_dfu_rt));
+	if (ret == 7) {
+		/* DFU 1.0 does not have this field */
+		printf("Deducing device DFU version from functional descriptor "
+		       "length\n");
+		func_dfu_rt.bcdDFUVersion = libusb_cpu_to_le16(0x0100);
+	} else if (ret < 9) {
+		fprintf(stderr, "WARNING: Can not find cached DFU functional "
+			"descriptor\n");
+		printf("Warning: Assuming DFU version 1.0\n");
+		func_dfu_rt.bcdDFUVersion = libusb_cpu_to_le16(0x0100);
+	}
+	printf("Run-time device DFU version %04x\n",
+	       libusb_le16_to_cpu(func_dfu_rt.bcdDFUVersion));
+
+	/* Transition from run-Time mode to DFU mode */
 	if (!(_rt_dif.flags & DFU_IFF_DFU)) {
 		/* In the 'first round' during runtime mode, there can only be one
 		* DFU Interface descriptor according to the DFU Spec. */
@@ -888,19 +988,37 @@ status_again:
 		break;
 	}
 
-	if (!transfer_size) {
-		/* Obtain DFU functional descriptor */
-		ret = usb_get_extra_descriptor(dif, USB_DT_DFU,
-				dif->interface, &func_dfu, sizeof(func_dfu));
-		if (ret < 0) {
-			fprintf(stderr, "Error obtaining DFU functional "
-				"descriptor\n");
-		} else {
-			transfer_size = libusb_le16_to_cpu(func_dfu.wTransferSize);
-			printf("Device returned transfer size %i\n",
-				transfer_size);
-		}
+	/* Get the DFU mode DFU functional descriptor
+	 * If it is not found cached, we will request it from the device */
+	ret = get_cached_extra_descriptor(dif, USB_DT_DFU, 0, 
+				    (unsigned char *) &func_dfu,
+				    sizeof(func_dfu));
+	if (ret < 7) {
+		fprintf(stderr, "Error obtaining cached DFU functional "
+			"descriptor\n");
+		ret = usb_get_any_descriptor(dif, USB_DT_DFU, 0,
+				    (unsigned char *) &func_dfu,
+				    sizeof(func_dfu));
 	}
+	if (ret == 7) {
+		printf("Deducing device DFU version from functional descriptor "
+		       "length\n");
+		func_dfu.bcdDFUVersion = libusb_cpu_to_le16(0x0100);
+	} else if (ret < 9) {
+		printf("Error obtaining DFU functional descriptor\n");
+		printf("Warning: Assuming DFU version 1.0\n");
+		func_dfu.bcdDFUVersion = libusb_cpu_to_le16(0x0100);
+		printf("Warning: Transfer size can not be detected\n");
+		func_dfu.wTransferSize = 0;
+	}
+	printf("DFU mode device DFU version %04x\n",
+	       libusb_le16_to_cpu(func_dfu.bcdDFUVersion));
+
+	if (!transfer_size) {
+		transfer_size = libusb_le16_to_cpu(func_dfu.wTransferSize);
+		printf("Device returned transfer size %i\n", transfer_size);
+	}
+
 	/* if returned zero or not detected (and not user specified) */
 	if (!transfer_size) {
 		transfer_size = DEFAULT_TRANSFER_SIZE;
@@ -933,7 +1051,7 @@ status_again:
 		}
 		if (!(quirks & QUIRK_POLLTIMEOUT))
 			usleep(status.bwPollTimeout * 1000);
-        }
+	}
 
 	switch (mode) {
 	case MODE_UPLOAD:
