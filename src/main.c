@@ -406,7 +406,7 @@ static int find_descriptor(const unsigned char *desc_list, int list_len,
 {
 	int p = 0;
 	int hit = 0;
-	
+
 	while (p + 1 < list_len) {
 		int desclen;
 
@@ -505,7 +505,7 @@ static int get_cached_extra_descriptor(struct dfu_if *dfu_if,
 		return -1;
 	} else if (ret) {
 		fprintf(stderr, "Error: failed "
-			"libusb_get_config_descriptor_by_value()\n");
+			"libusb_get_active_config_descriptor()\n");
 		exit(1);
 	}
 
