@@ -431,22 +431,19 @@ static int find_descriptor(const unsigned char *desc_list, int list_len,
 /* Look for a descriptor in the active configuration
  * Will also find extra descriptors which are normally
  * not returned by the standard libusb_get_descriptor() */
-static int usb_get_any_descriptor(struct dfu_if *dfu_if,
-				    uint8_t desc_type,
-				    uint8_t desc_index,
-				    unsigned char *resbuf, int res_len)
+static int usb_get_any_descriptor(struct libusb_device_handle *dev_handle,
+				  uint8_t desc_type,
+				  uint8_t desc_index,
+				  unsigned char *resbuf, int res_len)
 {
+	struct libusb_device *dev = libusb_get_device(dev_handle);
 	struct libusb_config_descriptor *config;
 	int ret;
 	uint16_t conflen;
 	unsigned char *cbuf;
 
-	/* We need to talk to the device, so it must be open */
-	if (!dfu_if->dev_handle)
-		return -1;
-
 	/* Get the total length of the configuration descriptors */
-	ret = libusb_get_active_config_descriptor(dfu_if->dev, &config);
+	ret = libusb_get_active_config_descriptor(dev, &config);
 	if (ret == LIBUSB_ERROR_NOT_FOUND) {
 		fprintf(stderr, "Error: Device is unconfigured\n");
 		return -1;
@@ -460,7 +457,7 @@ static int usb_get_any_descriptor(struct dfu_if *dfu_if,
 
 	/* Suck in the configuration descriptor list from device */
 	cbuf = malloc(conflen);
-	ret = libusb_get_descriptor(dfu_if->dev_handle, LIBUSB_DT_CONFIG,
+	ret = libusb_get_descriptor(dev_handle, LIBUSB_DT_CONFIG,
 				    desc_index, cbuf, conflen);
 	if (ret < conflen) {
 		fprintf(stderr, "Warning: failed to retrieve complete "
@@ -483,15 +480,17 @@ static int usb_get_any_descriptor(struct dfu_if *dfu_if,
 
 	/* Finally try to retrieve it requesting the device directly
 	 * This is not supported on all devices for non-standard types */
-	return libusb_get_descriptor(dfu_if->dev_handle, desc_type, desc_index,
+	return libusb_get_descriptor(dev_handle, desc_type, desc_index,
 				     resbuf, res_len);
 }
 
-/* Get cached extra descriptor from libusb, from active configuration
+/* Get cached extra descriptor from libusb for an interface
  * Returns length of found descriptor */
-static int get_cached_extra_descriptor(struct dfu_if *dfu_if,
-				 uint8_t desc_type, uint8_t desc_index,
-				 unsigned char *resbuf, int res_len)
+static int get_cached_extra_descriptor(struct libusb_device *dev,
+				       uint8_t bConfValue,
+				       uint8_t intf,
+				       uint8_t desc_type, uint8_t desc_index,
+				       unsigned char *resbuf, int res_len)
 {
 	struct libusb_config_descriptor *cfg;
 	const unsigned char *extra;
@@ -499,13 +498,13 @@ static int get_cached_extra_descriptor(struct dfu_if *dfu_if,
 	int ret;
 	int alt;
 
-	ret = libusb_get_active_config_descriptor(dfu_if->dev, &cfg);
+	ret = libusb_get_config_descriptor_by_value(dev, bConfValue, &cfg);
 	if (ret == LIBUSB_ERROR_NOT_FOUND) {
 		fprintf(stderr, "Error: Device is unconfigured\n");
 		return -1;
 	} else if (ret) {
 		fprintf(stderr, "Error: failed "
-			"libusb_get_active_config_descriptor()\n");
+			"libusb_config_descriptor_by_value()\n");
 		exit(1);
 	}
 
@@ -513,12 +512,10 @@ static int get_cached_extra_descriptor(struct dfu_if *dfu_if,
 	 * libusb may attach them to one setting. Therefore go through all.
 	 * Note that desc_index is per alternate setting, hits will not be
 	 * counted from one to another */
-	for (alt = 0; alt < cfg->interface[dfu_if->interface].num_altsetting;
+	for (alt = 0; alt < cfg->interface[intf].num_altsetting;
 	     alt++) {
-		extra = cfg->interface[dfu_if->interface].
-				altsetting[alt].extra;
-		extra_len = cfg->interface[dfu_if->interface].
-				altsetting[alt].extra_length;
+		extra = cfg->interface[intf].altsetting[alt].extra;
+		extra_len = cfg->interface[intf].altsetting[alt].extra_length;
 		if (extra_len > 1)
 			ret = find_descriptor(extra, extra_len, desc_type,
 					      desc_index, resbuf, res_len);
@@ -764,9 +761,10 @@ int main(int argc, char **argv)
 
 	/* Obtain run-time DFU functional descriptor without asking device
 	 * E.g. Freerunner does not like to be requested at this point */
-	ret = get_cached_extra_descriptor(&_rt_dif, USB_DT_DFU, 0,
-				    (unsigned char *) &func_dfu_rt,
-				    sizeof(func_dfu_rt));
+	ret = get_cached_extra_descriptor(_rt_dif.dev, _rt_dif.configuration,
+					  _rt_dif.interface, USB_DT_DFU, 0,
+					  (unsigned char *) &func_dfu_rt,
+					  sizeof(func_dfu_rt));
 	if (ret == 7) {
 		/* DFU 1.0 does not have this field */
 		printf("Deducing device DFU version from functional descriptor "
@@ -990,15 +988,17 @@ status_again:
 
 	/* Get the DFU mode DFU functional descriptor
 	 * If it is not found cached, we will request it from the device */
-	ret = get_cached_extra_descriptor(dif, USB_DT_DFU, 0, 
-				    (unsigned char *) &func_dfu,
-				    sizeof(func_dfu));
+	ret = get_cached_extra_descriptor(dif->dev, dif->configuration,
+					  dif->interface, USB_DT_DFU, 0,
+					  (unsigned char *) &func_dfu,
+					  sizeof(func_dfu));
 	if (ret < 7) {
 		fprintf(stderr, "Error obtaining cached DFU functional "
 			"descriptor\n");
-		ret = usb_get_any_descriptor(dif, USB_DT_DFU, 0,
-				    (unsigned char *) &func_dfu,
-				    sizeof(func_dfu));
+		ret = usb_get_any_descriptor(dif->dev_handle,
+					     USB_DT_DFU, 0,
+					     (unsigned char *) &func_dfu,
+					     sizeof(func_dfu));
 	}
 	if (ret == 7) {
 		printf("Deducing device DFU version from functional descriptor "
