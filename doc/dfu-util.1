@@ -5,7 +5,7 @@ dfu-util \- Device firmware update (DFU) USB programmer
 .B dfu-util \fR[\fB\-ldpciatUDRhvV\fR]
 .SH DESCRIPTION
 .B dfu-util
-is a program that implements the host (PC) side of the USB DFU
+is a program that implements the host (computer) side of the USB DFU
 (Universal Serial Bus Device Firmware Upgrade) protocol.
 .sp
 In the OpenMoko project (for example), this program is used to communicate
@@ -21,11 +21,10 @@ Specify vendor/product ID of the DFU device. Both
 .B VENDOR
 and
 .B PRODUCT
-are hex-numbers which must start with
-.BR 0x .
+are hexadecimal numbers (no prefix needed).
 Example:
 .sp
-.B "  $ dfu-util --device 0x1457:0x5119"
+.B "  $ dfu-util --device 1457:51ab"
 .sp
 If you only have one standards-compliant DFU device attached to your PC,
 this is optional. However, as soon as you have multiple DFU devices,
@@ -62,7 +61,7 @@ Write firmware from
 into device.
 .TP
 .B "\-R, \-\-reset"
-Issue USB reset signalling once we're finished.
+Issue USB reset signalling once we are finished.
 .TP
 .B "\-h, \-\-help"
 Show a help text and exit.
