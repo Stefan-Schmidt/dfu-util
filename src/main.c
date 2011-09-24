@@ -986,6 +986,21 @@ status_again:
 		break;
 	}
 
+	if (DFU_STATUS_OK != status.bStatus ) {
+		printf("WARNING: DFU Status: '%s'\n",
+			dfu_status_to_string(status.bStatus));
+		/* Clear our status & try again. */
+		dfu_clear_status(dif->dev_handle, dif->interface);
+		dfu_get_status(dif->dev_handle, dif->interface, &status);
+
+		if (DFU_STATUS_OK != status.bStatus) {
+			fprintf(stderr, "Error: %d\n", status.bStatus);
+			exit(1);
+		}
+		if (!(quirks & QUIRK_POLLTIMEOUT))
+			usleep(status.bwPollTimeout * 1000);
+	}
+
 	/* Get the DFU mode DFU functional descriptor
 	 * If it is not found cached, we will request it from the device */
 	ret = get_cached_extra_descriptor(dif->dev, dif->configuration,
@@ -1036,21 +1051,6 @@ status_again:
 	if (transfer_size < desc.bMaxPacketSize0) {
 		transfer_size = desc.bMaxPacketSize0;
 		printf("Adjusted transfer size to %i\n", transfer_size);
-	}
-
-	if (DFU_STATUS_OK != status.bStatus ) {
-		printf("WARNING: DFU Status: '%s'\n",
-			dfu_status_to_string(status.bStatus));
-		/* Clear our status & try again. */
-		dfu_clear_status(dif->dev_handle, dif->interface);
-		dfu_get_status(dif->dev_handle, dif->interface, &status);
-
-		if (DFU_STATUS_OK != status.bStatus) {
-			fprintf(stderr, "Error: %d\n", status.bStatus);
-			exit(1);
-		}
-		if (!(quirks & QUIRK_POLLTIMEOUT))
-			usleep(status.bwPollTimeout * 1000);
 	}
 
 	switch (mode) {
