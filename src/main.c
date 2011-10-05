@@ -594,7 +594,7 @@ int main(int argc, char **argv)
 	unsigned int host_page_size;
 	enum mode mode = MODE_NONE;
 	struct dfu_status status;
-	struct usb_dfu_func_descriptor func_dfu, func_dfu_rt;
+	struct usb_dfu_func_descriptor func_dfu = {0}, func_dfu_rt = {0};
 	libusb_context *ctx;
 	struct dfu_file file;
 	char *alt_name = NULL; /* query alt name if non-NULL */
@@ -821,10 +821,15 @@ int main(int argc, char **argv)
 			}
 			libusb_release_interface(_rt_dif.dev_handle,
 						 _rt_dif.interface);
-			printf("Resetting USB...\n");
-			ret = libusb_reset_device(_rt_dif.dev_handle);
-			if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND)
-				fprintf(stderr, "error resetting after detach\n");
+			if (func_dfu_rt.bmAttributes & USB_DFU_WILL_DETACH) {
+				printf("Device will detach and reattach...\n");
+			} else {
+				printf("Resetting USB...\n");
+				ret = libusb_reset_device(_rt_dif.dev_handle);
+				if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND)
+					fprintf(stderr, "error resetting "
+						"after detach\n");
+			}
 			sleep(2);
 			break;
 		case DFU_STATE_dfuERROR:
