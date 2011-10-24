@@ -36,6 +36,25 @@ tdk-bluetooth.log:
 - Only upload has been tested
 - Tester: Stefan Schmidt
 
+stm32f107:
+- STM32 microcontrollers with built-in (ROM) DFU loader
+- DFU implementation: Closed source but probably similar to the one
+  in their USB device libraries. Some relevant application notes:
+  http://www.st.com -> AN3156 and AN2606
+- Tested by Uwe Bonnes
+
+dso-nano:
+- DSO Nano pocket oscilloscope
+- DFU implementation: Based on ST Microelectronics USB FS Library 1.0
+  http://dsonano.googlecode.com/files/DS0201_OpenSource.rar
+- Tester: Tormod Volden
+
+opc-20:
+- Custom devices based on STM32F1xx
+- DFU implementation: ST Microelectronics USB FS Device Library 3.1.0
+  http://www.st.com -> um0424.zip
+- Tester: Tormod Volden
+
 
 Adding a log of your device here allows us avoiding regressions for
 hardware we cannot do testing on when working on the code. To prepare a log

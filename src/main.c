@@ -34,6 +34,7 @@
 #include "usb_dfu.h"
 #include "dfu_file.h"
 #include "dfu_load.h"
+#include "dfuse.h"
 #include "quirks.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -545,6 +546,9 @@ static void help(void)
 		"  -U --upload file\t\tRead firmware from device into <file>\n"
 		"  -D --download file\t\tWrite firmware from <file> into device\n"
 		"  -R --reset\t\t\tIssue USB Reset signalling once we're finished\n"
+		"  -s --dfuse-address address\tST DfuSe mode, specify target address for\n"
+		"\t\t\t\traw file download or upload. Not applicable for\n"
+		"\t\t\t\tDfuSe file (.dfu) downloads\n"
 		);
 }
 
@@ -552,6 +556,7 @@ static void print_version(void)
 {
 	printf("dfu-util %s\n\n", VERSION);
 	printf("(C) 2005-2008 by Weston Schmidt, Harald Welte and OpenMoko Inc.\n"
+	       "(C) 2010-2011 Tormod Volden (DfuSe support)\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
 
 	printf("dfu-util does currently only support DFU version 1.0\n\n");
@@ -575,6 +580,7 @@ static struct option opts[] = {
 	{ "upload", 1, 0, 'U' },
 	{ "download", 1, 0, 'D' },
 	{ "reset", 0, 0, 'R' },
+	{ "dfuse-address", 1, 0, 's' },
 };
 
 enum mode {
@@ -603,6 +609,8 @@ int main(int argc, char **argv)
 	char *end;
 	int final_reset = 0;
 	int ret;
+	int dfuse = 0;
+	unsigned int dfuse_address = 0; /* FIXME allow address to be zero? */
 
 	host_page_size = getpagesize();
 	memset(dif, 0, sizeof(*dif));
@@ -610,7 +618,7 @@ int main(int argc, char **argv)
 
 	while (1) {
 		int c, option_index = 0;
-		c = getopt_long(argc, argv, "hVvld:p:c:i:a:t:U:D:R", opts,
+		c = getopt_long(argc, argv, "hVvld:p:c:i:a:t:U:D:Rs:", opts,
 				&option_index);
 		if (c == -1)
 			break;
@@ -677,6 +685,17 @@ int main(int argc, char **argv)
 			break;
 		case 'R':
 			final_reset = 1;
+			break;
+		case 's':
+			dfuse = 1;
+			if (strcmp(optarg, "default")) {
+			    dfuse_address = strtoul(optarg, &end, 0);
+			    if (!dfuse_address || (*end)) {
+				fprintf(stderr, "invalid dfuse address: %s\n",
+					optarg);
+				exit(2);
+			    }
+			}
 			break;
 		default:
 			help();
@@ -1034,6 +1053,9 @@ status_again:
 	printf("DFU mode device DFU version %04x\n",
 	       libusb_le16_to_cpu(func_dfu.bcdDFUVersion));
 
+	if (func_dfu.bcdDFUVersion == 0x11a)
+		dfuse = 1;
+
 	if (!transfer_size) {
 		transfer_size = libusb_le16_to_cpu(func_dfu.wTransferSize);
 		printf("Device returned transfer size %i\n", transfer_size);
@@ -1065,8 +1087,14 @@ status_again:
 			perror(file.name);
 			exit(1);
 		}
-		if (dfuload_do_upload(dif, transfer_size, file) < 0)
+		if (dfuse) {
+		    if (dfuse_do_upload(dif, transfer_size, file,
+					dfuse_address) < 0)
 			exit(1);
+		} else {
+		    if (dfuload_do_upload(dif, transfer_size, file) < 0)
+			exit(1);
+		}
 		close(file.fd);
 		break;
 	case MODE_DOWNLOAD:
@@ -1080,7 +1108,7 @@ status_again:
 			exit(1);
 		if (ret == 0) {
 			fprintf(stderr, "Warning: File has no DFU suffix\n");
-		} else if (file.bcdDFU != 0x0100) {
+		} else if (file.bcdDFU != 0x0100 && file.bcdDFU != 0x11a) {
 			fprintf(stderr, "Unsupported DFU file revision "
 				"%04x\n", file.bcdDFU);
 			exit(1);
@@ -1095,8 +1123,14 @@ status_again:
 			fprintf(stderr, "Warning: File product ID %04x does "
 				"not match device %04x\n", file.idProduct, dif->product);
 		}
-		if (dfuload_do_dnload(dif, transfer_size, file) < 0)
-			exit(1);
+		if (dfuse || file.bcdDFU == 0x11a) {
+		        if (dfuse_do_dnload(dif, transfer_size, file,
+							dfuse_address) < 0)
+				exit(1);
+		} else {
+			if (dfuload_do_dnload(dif, transfer_size, file) < 0)
+				exit(1);
+	 	}
 		close(file.fd);
 		break;
 	default:
