@@ -536,6 +536,7 @@ static void help(void)
 		"  -V --version\t\t\tPrint the version number\n"
 		"  -v --verbose\t\t\tPrint verbose debug statements\n"
 		"  -l --list\t\t\tList the currently attached DFU capable USB devices\n"
+		"  -e --detach\t\t\tDetach the currently attached DFU capable USB devices\n"
 		"  -d --device vendor:product\tSpecify Vendor/Product ID of DFU device\n"
 		"  -p --path bus-port. ... .port\tSpecify path to DFU device\n"
 		"  -c --cfg config_nr\t\tSpecify the Configuration of DFU device\n"
@@ -568,6 +569,7 @@ static struct option opts[] = {
 	{ "version", 0, 0, 'V' },
 	{ "verbose", 0, 0, 'v' },
 	{ "list", 0, 0, 'l' },
+	{ "detach", 0, 0, 'e' },
 	{ "device", 1, 0, 'd' },
 	{ "path", 1, 0, 'p' },
 	{ "configuration", 1, 0, 'c' },
@@ -587,6 +589,7 @@ enum mode {
 	MODE_NONE,
 	MODE_VERSION,
 	MODE_LIST,
+	MODE_DETACH,
 	MODE_UPLOAD,
 	MODE_DOWNLOAD,
 };
@@ -618,7 +621,7 @@ int main(int argc, char **argv)
 
 	while (1) {
 		int c, option_index = 0;
-		c = getopt_long(argc, argv, "hVvld:p:c:i:a:t:U:D:Rs:", opts,
+		c = getopt_long(argc, argv, "hVvled:p:c:i:a:t:U:D:Rs", opts,
 				&option_index);
 		if (c == -1)
 			break;
@@ -636,6 +639,9 @@ int main(int argc, char **argv)
 			break;
 		case 'l':
 			mode = MODE_LIST;
+			break;
+		case 'e':
+			mode = MODE_DETACH;
 			break;
 		case 'd':
 			device_id_filter = optarg;
@@ -797,6 +803,19 @@ int main(int argc, char **argv)
 	}
 	printf("Run-time device DFU version %04x\n",
 	       libusb_le16_to_cpu(func_dfu_rt.bcdDFUVersion));
+
+	if (mode == MODE_DETACH) {
+		if (dfu_detach(_rt_dif.dev_handle, _rt_dif.interface, 1000) < 0) {
+			fprintf(stderr, "error detaching\n");
+			exit(1);
+		}
+		libusb_release_interface(_rt_dif.dev_handle, _rt_dif.interface);
+		ret = libusb_reset_device(_rt_dif.dev_handle);
+		if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND)
+			fprintf(stderr, "error resetting "
+				"after detach\n");
+		exit(0);
+	}
 
 	/* Transition from run-Time mode to DFU mode */
 	if (!(_rt_dif.flags & DFU_IFF_DFU)) {
