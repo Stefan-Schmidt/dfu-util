@@ -1,3 +1,11 @@
+0.5:
+	o DfuSe extension support for ST devices (Tormod Volden)
+	o Add initial support for bitWillDetach flag from DFU 1.1 (Tormod
+	  Volden)
+	o Internal cleanup and some manual page fixes (Tormod Volden)
+
+2011-11-02: Stefan Schmidt <stefan@datenfreihafen.org>
+
 0.4:
 	o Rework to use libusb-1.0 (Stefan Schmidt)
 	o DFU suffix support (Tormod Volden, Stefan Schmidt)
