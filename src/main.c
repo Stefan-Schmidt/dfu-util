@@ -830,7 +830,7 @@ int main(int argc, char **argv)
 		}
 
 		if (libusb_set_interface_alt_setting(_rt_dif.dev_handle, _rt_dif.interface, 0) < 0) {
-			fprintf(stderr, "Cannot set alt interface\n");
+			fprintf(stderr, "Cannot set alt interface zero\n");
 			exit(1);
 		}
 
@@ -957,6 +957,8 @@ dfustate:
 		fprintf(stderr, "No matching DFU Interface after RESET?!?\n");
 		exit(1);
 	} else if (num_ifs > 1 ) {
+		printf("Detected interfaces after DFU transition\n");
+		list_dfu_interfaces(ctx);
 		fprintf(stderr, "We have %u DFU Interfaces/Altsettings,"
 			" you have to specify one via --intf / --alt"
 			" options\n", num_ifs);
