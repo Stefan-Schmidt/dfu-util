@@ -815,19 +815,6 @@ int main(int argc, char **argv)
 	printf("Run-time device DFU version %04x\n",
 	       libusb_le16_to_cpu(func_dfu_rt.bcdDFUVersion));
 
-	if (mode == MODE_DETACH) {
-		if (dfu_detach(_rt_dif.dev_handle, _rt_dif.interface, 1000) < 0) {
-			fprintf(stderr, "error detaching\n");
-			exit(1);
-		}
-		libusb_release_interface(_rt_dif.dev_handle, _rt_dif.interface);
-		ret = libusb_reset_device(_rt_dif.dev_handle);
-		if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND)
-			fprintf(stderr, "error resetting "
-				"after detach\n");
-		exit(0);
-	}
-
 	/* Transition from run-Time mode to DFU mode */
 	if (!(_rt_dif.flags & DFU_IFF_DFU)) {
 		/* In the 'first round' during runtime mode, there can only be one
@@ -899,6 +886,11 @@ int main(int argc, char **argv)
 		libusb_release_interface(_rt_dif.dev_handle,
 					 _rt_dif.interface);
 		libusb_close(_rt_dif.dev_handle);
+
+		if (mode == MODE_DETACH) {
+			libusb_exit(ctx);
+			exit(0);
+		}
 
 		/* now we need to re-scan the bus and locate our device */
 //		if (usb_find_devices() < 2)
