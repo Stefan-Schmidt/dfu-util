@@ -76,6 +76,9 @@ void free_segment_list(struct memsegment *segment_list)
 	free(segment_list);
 }
 
+/* Parse memory map from interface descriptor string
+ * encoded as per ST document UM0424 section 4.3.2.
+ */
 struct memsegment *parse_memory_layout(char *intf_desc)
 {
 
@@ -90,9 +93,6 @@ struct memsegment *parse_memory_layout(char *intf_desc)
 	struct memsegment *segment_list = NULL;
 	struct memsegment segment;
 
-#ifdef DEBUG_DRY
-	intf_desc = "@fake /0x08000000/12*001Ka,11*001Kg,9*2Ka,24*4Kg";
-#endif
 	name = malloc(strlen(intf_desc));
 	if (!name) {
 		fprintf(stderr, "Error: Cannot allocate memory\n");
