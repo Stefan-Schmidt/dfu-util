@@ -76,10 +76,14 @@ static int find_dfu_if(libusb_device *dev,
 	int rc;
 
 	memset(dfu_if, 0, sizeof(*dfu_if));
-	libusb_get_device_descriptor(dev, &desc);
+	rc = libusb_get_device_descriptor(dev, &desc);
+	if (rc)
+		return rc;
 	for (cfg_idx = 0; cfg_idx < desc.bNumConfigurations;
 	     cfg_idx++) {
-		libusb_get_config_descriptor(dev, cfg_idx, &cfg);
+		rc = libusb_get_config_descriptor(dev, cfg_idx, &cfg);
+		if (rc)
+			return rc;
 		/* in some cases, noticably FreeBSD if uid != 0,
 		 * the configuration descriptors are empty */
 		if (!cfg)
@@ -204,7 +208,8 @@ static int get_alt_name(struct dfu_if *dfu_if, unsigned char *name)
 	ret = -1;
 	if (alt_name_str_idx) {
 		if (!dfu_if->dev_handle)
-			libusb_open(dfu_if->dev, &dfu_if->dev_handle);
+			if (libusb_open(dfu_if->dev, &dfu_if->dev_handle))
+				dfu_if->dev_handle = NULL;
 		if (dfu_if->dev_handle)
 			ret = libusb_get_string_descriptor_ascii(
 					dfu_if->dev_handle, alt_name_str_idx,
@@ -299,7 +304,8 @@ static int iterate_dfu_devices(libusb_context *ctx, struct dfu_if *dif,
 		    (libusb_get_bus_number(dev) != dif->bus ||
 		     libusb_get_device_address(dev) != dif->devnum))
 			continue;
-		libusb_get_device_descriptor(dev, &desc);
+		if (libusb_get_device_descriptor(dev, &desc))
+			continue;
 		if (dif && (dif->flags & DFU_IFF_VENDOR) &&
 		    desc.idVendor != dif->vendor)
 			continue;
@@ -437,12 +443,17 @@ static int usb_get_any_descriptor(struct libusb_device_handle *dev_handle,
 				  uint8_t desc_index,
 				  unsigned char *resbuf, int res_len)
 {
-	struct libusb_device *dev = libusb_get_device(dev_handle);
+	struct libusb_device *dev;
 	struct libusb_config_descriptor *config;
 	int ret;
 	uint16_t conflen;
 	unsigned char *cbuf;
 
+	dev = libusb_get_device(dev_handle);
+	if (!dev) {
+		fprintf(stderr, "Error: Broken device handle\n");
+		return -1;
+	}
 	/* Get the total length of the configuration descriptors */
 	ret = libusb_get_active_config_descriptor(dev, &config);
 	if (ret == LIBUSB_ERROR_NOT_FOUND) {
@@ -767,10 +778,10 @@ int main(int argc, char **argv)
 
 	/* We have exactly one device. Its libusb_device is now in dif->dev */
 
-	printf("Opening DFU USB device... ");
-	libusb_open(dif->dev, &dif->dev_handle);
-	if (!dif->dev_handle) {
-		fprintf(stderr, "Cannot open device \n");
+	printf("Opening DFU capable USB device... ");
+	ret = libusb_open(dif->dev, &dif->dev_handle);
+	if (ret || !dif->dev_handle) {
+		fprintf(stderr, "Cannot open device\n");
 		exit(1);
 	}
 
@@ -903,7 +914,7 @@ int main(int argc, char **argv)
 			}
 			if (!ret) {
 				fprintf(stderr,
-				    "Can't resolve path after RESET?\n");
+				    "Cannot resolve path after RESET?\n");
 				exit(1);
 			}
 		}
@@ -921,9 +932,9 @@ int main(int argc, char **argv)
 		if (!get_first_dfu_device(ctx, dif))
 			exit(3);
 
-		printf("Opening USB Device...\n");
-		libusb_open(dif->dev, &dif->dev_handle);
-		if (!dif->dev_handle) {
+		printf("Opening DFU USB Device...\n");
+		ret = libusb_open(dif->dev, &dif->dev_handle);
+		if (ret || !dif->dev_handle) {
 			fprintf(stderr, "Cannot open device\n");
 			exit(1);
 		}
@@ -1093,7 +1104,10 @@ status_again:
 	}
 	/* DFU specification */
 	struct libusb_device_descriptor desc;
-	libusb_get_device_descriptor(dif->dev, &desc);
+	if (libusb_get_device_descriptor(dif->dev, &desc)) {
+		fprintf(stderr, "Error: Failed to get device descriptor\n");
+		exit(1);
+	}
 	if (transfer_size < desc.bMaxPacketSize0) {
 		transfer_size = desc.bMaxPacketSize0;
 		printf("Adjusted transfer size to %i\n", transfer_size);
