@@ -43,6 +43,11 @@ stm32f107:
   http://www.st.com -> AN3156 and AN2606
 - Tested by Uwe Bonnes
 
+stm32f4discovery:
+- STM32 microcontroller board with built-in (ROM) DFU loader
+- DFU implementation: Closed source, probably similar to stm32f107.
+- Tested by Joe Rothweiler
+
 dso-nano:
 - DSO Nano pocket oscilloscope
 - DFU implementation: Based on ST Microelectronics USB FS Library 1.0
@@ -56,7 +61,7 @@ opc-20:
 - Tester: Tormod Volden
 
 
-Adding a log of your device here allows us avoiding regressions for
-hardware we cannot do testing on when working on the code. To prepare a log
+Adding a log of your device here helps us to avoid regressions for
+hardware we cannot test while working on the code. To prepare a log
 please run 'sudo lsusb -v -d $USBIDS > $DEVICE.log', prepare a description
 snippet as above, and send it to us.
