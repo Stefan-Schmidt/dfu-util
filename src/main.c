@@ -632,7 +632,7 @@ int main(int argc, char **argv)
 
 	while (1) {
 		int c, option_index = 0;
-		c = getopt_long(argc, argv, "hVvled:p:c:i:a:t:U:D:Rs", opts,
+		c = getopt_long(argc, argv, "hVvled:p:c:i:a:t:U:D:Rs:", opts,
 				&option_index);
 		if (c == -1)
 			break;
