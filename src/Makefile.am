@@ -1,6 +1,6 @@
 AM_CFLAGS = -Wall
 
-bin_PROGRAMS = dfu-util
+bin_PROGRAMS = dfu-util dfu-suffix
 dfu_util_SOURCES = main.c \
 		dfu_load.c \
 		dfu_load.h \
@@ -15,3 +15,7 @@ dfu_util_SOURCES = main.c \
 		dfu_file.h \
 		quirks.c \
 		quirks.h
+
+dfu_suffix_SOURCES = suffix.c \
+		dfu_file.h \
+		dfu_file.c
