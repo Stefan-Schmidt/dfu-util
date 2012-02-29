@@ -16,5 +16,6 @@ struct dfu_file {
 };
 
 int parse_dfu_suffix(struct dfu_file *file);
+int generate_dfu_suffix(struct dfu_file *file);
 
 #endif

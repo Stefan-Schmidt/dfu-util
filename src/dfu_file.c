@@ -1,7 +1,8 @@
 /*
- * Checks for and parses a DFU suffix
+ * Checks for, parses and generates a DFU suffix
  *
  * (C) 2011 Tormod Volden <debian.tormod@gmail.com>
+ * (C) 2012 Stefan Schmidt <stefan@datenfreihafen.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +29,8 @@
 #include <stdlib.h>
 
 #include "dfu_file.h"
+
+#define DFU_SUFFIX_LENGTH 16
 
 unsigned long crc32_table[] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -90,7 +93,7 @@ int parse_dfu_suffix(struct dfu_file *file)
 	struct stat st;
 	uint32_t crc = 0xffffffff;
 	/* supported suffices are at least 16 bytes */
-	unsigned char dfusuffix[16];
+	unsigned char dfusuffix[DFU_SUFFIX_LENGTH];
 	unsigned char *firmware = NULL;
 
 	file->size = 0;
@@ -124,6 +127,7 @@ int parse_dfu_suffix(struct dfu_file *file)
 	if (ret < 0) {
 		fprintf(stderr, "Could not read file\n");
 		perror(file->name);
+		free(firmware);
 		return ret;
 	}
 
@@ -188,3 +192,84 @@ rewind:
 	return ret;
 }
 
+/* reads fd, generates CRC and adds DFU suffix to file
+   returns positive on success
+   returns negative on errors */
+
+int generate_dfu_suffix(struct dfu_file *file)
+{
+	int ret;
+	int i;
+	struct stat st;
+	unsigned char dfusuffix[DFU_SUFFIX_LENGTH];
+	unsigned char *firmware = NULL;
+
+	file->size = 0;
+	file->dwCRC = 0xffffffff;
+	file->suffixlen = DFU_SUFFIX_LENGTH;
+	file->bcdDFU = 0x0100; /* Default to bcdDFU version 1.0 */
+
+	dfusuffix[0] = file->bcdDevice & 0xff;
+	dfusuffix[1] = file->bcdDevice >> 8;
+	dfusuffix[2] = file->idProduct & 0xff;
+	dfusuffix[3] = file->idProduct >> 8;
+	dfusuffix[4] = file->idVendor & 0xff;
+	dfusuffix[5] = file->idVendor >> 8;
+	dfusuffix[6] = file->bcdDFU & 0xff;
+	dfusuffix[7] = file->bcdDFU >> 8;
+	dfusuffix[8] = 'U';
+	dfusuffix[9] = 'F';
+	dfusuffix[10] = 'D';
+	dfusuffix[11] = file->suffixlen;
+
+	ret = fstat(file->fd, &st);
+	if (ret < 0) {
+		perror(file->name);
+		return ret;
+	}
+
+	file->size = st.st_size;
+
+	firmware = malloc(file->size + file->suffixlen - 4); /* All but CRC */
+	if (!firmware) {
+		fprintf(stderr, "Unable to allocate file buffer for firmware.\n");
+		exit(1);
+	}
+
+	ret = read(file->fd, firmware, file->size);
+	if (ret < 0) {
+		fprintf(stderr, "Could not read file\n");
+		perror(file->name);
+		free(firmware);
+		return ret;
+	}
+
+	/* Copy parts of the suffix for CRC calculation */
+	for(i = 0; i < 12; i++)
+		firmware[file->size + i] = dfusuffix[i];
+
+	/* Calculate CRC. It is calculated over file and suffix excluding the CRC
+	 * itself */
+	for (i = 0; i < file->size + file->suffixlen - 4; i++)
+		file->dwCRC = crc32_byte(file->dwCRC, firmware[i]);
+
+	free(firmware);
+
+	dfusuffix[12] = file->dwCRC;
+	dfusuffix[13] = file->dwCRC >> 8;
+	dfusuffix[14] = file->dwCRC >> 16;
+	dfusuffix[15] = file->dwCRC >> 24;
+
+	/* After seeking to the end of the file add the suffix */
+	ret = write(file->fd, dfusuffix, sizeof(dfusuffix));
+	if (ret < 0) {
+		fprintf(stderr, "Could not write DFU suffix\n");
+		perror(file->name);
+	} else if (ret < sizeof(dfusuffix)) {
+		fprintf(stderr, "Could not write whole DFU suffix\n");
+		ret = -EIO;
+	}
+
+	lseek(file->fd, 0, SEEK_SET);
+	return ret;
+}
