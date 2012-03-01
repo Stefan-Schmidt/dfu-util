@@ -21,7 +21,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#ifndef ENV_WINDOWS
+ #include <unistd.h>
+#endif
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
@@ -158,7 +160,11 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 		exit(1);
 	}
 	/* wait while command is executed */
+#ifndef ENV_WINDOWS
 	usleep(dst.bwPollTimeout * 1000);
+#else
+	Sleep(dst.bwPollTimeout);
+#endif
 
 	ret = dfu_get_status(dif->dev_handle, dif->interface, &dst);
 	if (ret < 0) {
@@ -169,7 +175,11 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 		fprintf(stderr, "Error: Command not correctly executed\n");
 		exit(1);
 	}
+#ifndef ENV_WINDOWS
 	usleep(dst.bwPollTimeout * 1000);
+#else
+	Sleep(dst.bwPollTimeout);
+#endif
 
 	ret = dfu_abort(dif->dev_handle, dif->interface);
 	if (ret < 0) {
@@ -185,7 +195,11 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 		fprintf(stderr, "Error: Failed to enter idle state on abort\n");
 		exit(1);
 	}
+#ifndef ENV_WINDOWS
 	usleep(dst.bwPollTimeout * 1000);
+#else
+	Sleep(dst.bwPollTimeout);
+#endif
 	return ret;
 }
 
@@ -198,7 +212,7 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 	int transaction;
 	int ret;
 
-	buf = malloc(xfer_size);
+	buf = (unsigned char*)malloc(xfer_size);
 	if (!buf)
 		return -ENOMEM;
 
@@ -239,7 +253,11 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 			ret = rc;
 			goto out_free;
 		}
+#ifdef ENV_WINDOWS
 		write_rc = write(file.fd, buf, rc);
+#else
+		write_rc = fwrite(buf, rc,1,file.fd);
+#endif
 		if (write_rc < rc) {
 			fprintf(stderr, "Short file write: %s\n",
 				strerror(errno));
@@ -285,7 +303,11 @@ int dfuse_dnload_chunk(struct dfu_if *dif, unsigned char *data, int size,
 			fprintf(stderr, "Error during download get_status\n");
 			return ret;
 		}
+#ifndef ENV_WINDOWS
 		usleep(dst.bwPollTimeout * 1000);
+#else
+		Sleep(dst.bwPollTimeout);
+#endif
 	} while (dst.bState != DFU_STATE_dfuDNLOAD_IDLE &&
 		 dst.bState != DFU_STATE_dfuERROR);
 
@@ -318,7 +340,7 @@ int dfuse_dnload_element(struct dfu_if *dif, unsigned int dwElementAddress,
 		exit(1);
 	}
 
-	for (p = 0; p < dwElementSize; p += xfer_size) {
+	for (p = 0; p < (int)dwElementSize; p += xfer_size) {
 		int page_size;
 		unsigned int erase_address;
 		unsigned int address = dwElementAddress + p;
@@ -334,7 +356,7 @@ int dfuse_dnload_element(struct dfu_if *dif, unsigned int dwElementAddress,
 		page_size = segment->pagesize;
 
 		/* check if this is the last chunk */
-		if (p + chunk_size > dwElementSize)
+		if (p + chunk_size > (int)dwElementSize)
 			chunk_size = dwElementSize - p;
 
 		/* Erase only for flash memory downloads */
@@ -394,14 +416,18 @@ int dfuse_do_bin_dnload(struct dfu_if *dif, int xfer_size,
 		printf("Uploading to address = 0x%08x, size = %i\n",
 		       dwElementAddress, dwElementSize);
 
-	data = malloc(dwElementSize);
+	data = (unsigned char*)malloc(dwElementSize);
 	if (!data) {
 		fprintf(stderr, "Could not allocate data buffer\n");
 		return -ENOMEM;
 	}
+#ifndef ENV_WINDOWS
 	ret = read(file.fd, data, dwElementSize);
+#else
+	ret = fread(data,1,dwElementSize,file.fd);
+#endif
 	read_bytes += ret;
-	if (ret < dwElementSize) {
+	if (ret < (int)dwElementSize) {
 		fprintf(stderr, "Could not read data\n");
 		ret = -EINVAL;
 		goto out_free;
@@ -448,7 +474,11 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 		return -EINVAL;
 	}
 
+#ifndef ENV_WINDOWS
 	ret = read(file.fd, dfuprefix, sizeof(dfuprefix));
+#else
+	ret = fread(dfuprefix,1,sizeof(dfuprefix),file.fd);
+#endif
 	if (ret < (int)sizeof(dfuprefix)) {
 		fprintf(stderr, "Could not read DfuSe header\n");
 		return -EIO;
@@ -468,9 +498,13 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 
 	for (image = 1; image <= bTargets; image++) {
 		printf("parsing DFU image %i\n", image);
+#ifndef ENV_WINDOWS
 		ret = read(file.fd, targetprefix, sizeof(targetprefix));
+#else
+		ret = fread(targetprefix,1,sizeof(targetprefix),file.fd);
+#endif
 		read_bytes += ret;
-		if (ret < sizeof(targetprefix)) {
+		if (ret < (int)sizeof(targetprefix)) {
 			fprintf(stderr, "Could not read DFU header\n");
 			return -EIO;
 		}
@@ -491,10 +525,13 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 			       " to download this image!\n");
 		for (element = 1; element <= dwNbElements; element++) {
 			printf("parsing element %i, ", element);
-			ret =
-			    read(file.fd, elementheader, sizeof(elementheader));
+#ifndef ENV_WINDOWS
+			ret = read(file.fd, elementheader, sizeof(elementheader));
+#else
+			ret = fread(elementheader,1,sizeof(elementheader),file.fd);
+#endif
 			read_bytes += ret;
-			if (ret < sizeof(elementheader)) {
+			if (ret < (int)sizeof(elementheader)) {
 				fprintf(stderr,
 					"Could not read element header\n");
 				return -EINVAL;
@@ -513,15 +550,19 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 					"File too small for element size\n");
 				return -EINVAL;
 			}
-			data = malloc(dwElementSize);
+			data = (unsigned char*)malloc(dwElementSize);
 			if (!data) {
 				fprintf(stderr,
 					"Could not allocate data buffer\n");
 				return -ENOMEM;
 			}
+#ifndef ENV_WINDOWS
 			ret = read(file.fd, data, dwElementSize);
+#else
+			ret = fread(data,1,dwElementSize,file.fd);
+#endif
 			read_bytes += ret;
-			if (ret < dwElementSize) {
+			if (ret < (int)dwElementSize) {
 				fprintf(stderr, "Could not read data\n");
 				free(data);
 				return -EIO;
@@ -541,12 +582,16 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 	}
 
 	/* Just for book-keeping, read through the whole file */
-	data = malloc(file.suffixlen);
+	data = (unsigned char*)malloc(file.suffixlen);
 	if (!data) {
 		fprintf(stderr, "Could not allocate data buffer for suffix\n");
 		return -ENOMEM;
 	}
+#ifndef ENV_WINDOWS
 	ret = read(file.fd, data, file.suffixlen);
+#else
+	ret = fread(data,1,file.suffixlen,file.fd);
+#endif
 	free(data);
 	if (ret < file.suffixlen) {
 		fprintf(stderr, "Could not read through suffix\n");

@@ -329,9 +329,9 @@ int dfu_abort( libusb_device_handle *device,
 }
 
 
-char* dfu_state_to_string( int state )
+const char* dfu_state_to_string( int state )
 {
-    char *message = NULL;
+    const char *message = NULL;
 
     switch( state ) {
         case STATE_APP_IDLE:
@@ -373,38 +373,41 @@ char* dfu_state_to_string( int state )
 }
 
 /* Chapter 6.1.2 */
+
+#define DFU_STATUS_OK         0x00
+#define DFU_STATUS_errTARGET     0x01
+#define DFU_STATUS_errFILE    0x02
+#define DFU_STATUS_errWRITE      0x03
+#define DFU_STATUS_errERASE      0x04
+#define DFU_STATUS_errCHECK_ERASED  0x05
+#define DFU_STATUS_errPROG    0x06
+#define DFU_STATUS_errVERIFY     0x07
+#define DFU_STATUS_errADDRESS    0x08
+#define DFU_STATUS_errNOTDONE    0x09
+#define DFU_STATUS_errFIRMWARE      0x0a
+#define DFU_STATUS_errVENDOR     0x0b
+#define DFU_STATUS_errUSBR    0x0c
+#define DFU_STATUS_errPOR     0x0d
+#define DFU_STATUS_errUNKNOWN    0x0e
+#define DFU_STATUS_errSTALLEDPKT 0x0f
+
 static const char *dfu_status_names[] = {
-	[DFU_STATUS_OK]			= "No error condition is present",
-	[DFU_STATUS_errTARGET]		= 
-		"File is not targeted for use by this device",
-	[DFU_STATUS_errFILE]		=
-		"File is for this device but fails some vendor-specific test",
-	[DFU_STATUS_errWRITE]		=
-		"Device is unable to write memory",
-	[DFU_STATUS_errERASE]		=
-		"Memory erase function failed",
-	[DFU_STATUS_errCHECK_ERASED]	=
-		"Memory erase check failed",
-	[DFU_STATUS_errPROG]		=
-		"Program memory function failed",
-	[DFU_STATUS_errVERIFY]		=
-		"Programmed memory failed verification",
-	[DFU_STATUS_errADDRESS]		=
-		"Cannot program memory due to received address that is out of range",
-	[DFU_STATUS_errNOTDONE]		=
-		"Received DFU_DNLOAD with wLength = 0, but device does not think that it has all data yet",
-	[DFU_STATUS_errFIRMWARE]	=
-		"Device's firmware is corrupt. It cannot return to run-time (non-DFU) operations",
-	[DFU_STATUS_errVENDOR]		=
-		"iString indicates a vendor specific error",
-	[DFU_STATUS_errUSBR]		=
-		"Device detected unexpected USB reset signalling",
-	[DFU_STATUS_errPOR]		=
-		"Device detected unexpected power on reset",
-	[DFU_STATUS_errUNKNOWN]		=
-		"Something went wrong, but the device does not know what it was",
-	[DFU_STATUS_errSTALLEDPKT]	=
-		"Device stalled an unexpected request",
+	"No error condition is present",
+	"File is not targeted for use by this device",
+	"File is for this device but fails some vendor-specific test",
+	"Device is unable to write memory",
+	"Memory erase function failed",
+	"Memory erase check failed",
+	"Program memory function failed",
+	"Programmed memory failed verification",
+	"Cannot program memory due to received address that is out of range",
+	"Received DFU_DNLOAD with wLength = 0, but device does not think that it has all data yet",
+	"Device's firmware is corrupt. It cannot return to run-time (non-DFU) operations",
+	"iString indicates a vendor specific error",
+	"Device detected unexpected USB reset signalling",
+	"Device detected unexpected power on reset",
+	"Something went wrong, but the device does not know what it was",
+   "Device stalled an unexpected request"
 };
 
 

@@ -19,15 +19,20 @@
  */
 
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <stdint.h>
+#ifndef ENV_WINDOWS
+ #include <stdint.h>
+#endif
 #include <stdlib.h>
 
 #include "dfu_file.h"
+
+#ifndef ENV_WINDOWS
+ #include <unistd.h>
+#endif
 
 unsigned long crc32_table[] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -74,7 +79,7 @@ unsigned long crc32_table[] = {
     0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
     0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d};
 
-uint32_t crc32_byte(uint32_t accum, uint8_t delta)
+u_int32_t crc32_byte(u_int32_t accum, u_int8_t delta)
 {
         return crc32_table[(accum ^ delta) & 0xff] ^ (accum >> 8);
 }
@@ -87,8 +92,10 @@ int parse_dfu_suffix(struct dfu_file *file)
 {
 	int ret;
 	int i;
+#ifndef ENV_WINDOWS
 	struct stat st;
-	uint32_t crc = 0xffffffff;
+#endif
+	u_int32_t crc = 0xffffffff;
 	/* supported suffices are at least 16 bytes */
 	unsigned char dfusuffix[16];
 	unsigned char *firmware = NULL;
@@ -102,6 +109,7 @@ int parse_dfu_suffix(struct dfu_file *file)
 	file->idProduct = 0xffff; /* wildcard value */
 	file->bcdDevice = 0xffff; /* wildcard value */
 
+#ifndef ENV_WINDOWS
 	ret = fstat(file->fd, &st);
 	if (ret < 0) {
 		perror(file->name);
@@ -113,14 +121,23 @@ int parse_dfu_suffix(struct dfu_file *file)
 		fprintf(stderr, "File too short for DFU suffix\n");
 		return 0;
 	}
+#else
+   fseek(file->fd,0,SEEK_END);
+   file->size=ftell(file->fd);
+   fseek(file->fd,0,SEEK_SET);
+#endif
 
-	firmware = malloc(file->size);
+	firmware = (unsigned char*)malloc(file->size);
 	if (!firmware) {
 		fprintf(stderr, "Unable to allocate file buffer for firmware.\n");
 		exit(1);
 	}
 
+#ifndef ENV_WINDOWS
 	ret = read(file->fd, firmware, file->size);
+#else
+	ret = fread(firmware,1,file->size,file->fd);
+#endif
 	if (ret < 0) {
 		fprintf(stderr, "Could not read file\n");
 		perror(file->name);
@@ -132,19 +149,27 @@ int parse_dfu_suffix(struct dfu_file *file)
 
 	free(firmware);
 
+#ifndef ENV_WINDOWS
 	ret = lseek(file->fd, -sizeof(dfusuffix), SEEK_END);
+#else
+	ret = fseek(file->fd, -sizeof(dfusuffix), SEEK_END);
+#endif
 	if (ret < 0) {
 		fprintf(stderr, "Could not seek to DFU suffix\n");
 		perror(file->name);
 		goto rewind;
 	}
 
+#ifndef ENV_WINDOWS
 	ret = read(file->fd, dfusuffix, sizeof(dfusuffix));
+#else
+	ret = fread(dfusuffix,1,sizeof(dfusuffix),file->fd);
+#endif
 	if (ret < 0) {
 		fprintf(stderr, "Could not read DFU suffix\n");
 		perror(file->name);
 		goto rewind;
-	} else if (ret < sizeof(dfusuffix)) {
+	} else if (ret < (int)sizeof(dfusuffix)) {
 		fprintf(stderr, "Could not read whole DFU suffix\n");
 		ret = -EIO;
 		goto rewind;
@@ -184,7 +209,11 @@ int parse_dfu_suffix(struct dfu_file *file)
 	file->bcdDevice = (dfusuffix[1] << 8) + dfusuffix[0];
 
 rewind:
+#ifndef ENV_WINDOWS
 	lseek(file->fd, 0, SEEK_SET);
+#else
+	fseek(file->fd, 0, SEEK_SET);
+#endif
 	return ret;
 }
 

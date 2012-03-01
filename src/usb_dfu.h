@@ -25,6 +25,15 @@
 
 #include <sys/types.h>
 
+#ifndef ENV_WINDOWS
+ #include <stdint.h>
+#else
+ typedef unsigned char u_int8_t;
+ typedef unsigned short u_int16_t;
+ typedef unsigned int u_int32_t;
+ #pragma pack(1)
+#endif
+
 #define USB_DT_DFU			0x21
 
 struct usb_dfu_func_descriptor {
@@ -38,7 +47,11 @@ struct usb_dfu_func_descriptor {
 	u_int16_t		wDetachTimeOut;
 	u_int16_t		wTransferSize;
 	u_int16_t		bcdDFUVersion;
-} __attribute__ ((packed));
+}
+#ifndef ENV_WINDOWS
+ __attribute__ ((packed))
+#endif
+;
 
 #define USB_DT_DFU_SIZE			9
 
@@ -102,6 +115,10 @@ struct dfu_file_suffix {
 	u_int16_t idVendor;	/* VendorID */
 	u_int16_t idProduct;	/* ProductID */
 	u_int16_t bcdDevice;	/* Device Revision, or 0xffff */
-} __attribute__ ((packed));
+}
+#ifndef ENV_WINDOWS
+__attribute__ ((packed))
+#endif
+;
 
 #endif /* _USB_DFU_H */

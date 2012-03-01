@@ -2,9 +2,16 @@
 #ifndef _DFU_FILE_H
 #define _DFU_FILE_H
 
+#include <stdio.h>
+#include "usb_dfu.h"
+
 struct dfu_file {
     const char *name;
+#ifdef ENV_WINDOWS
+    FILE *fd;
+#else
     int fd;
+#endif
     off_t size;
     /* From DFU suffix fields */
     u_int32_t dwCRC;

@@ -21,6 +21,12 @@
 #ifndef __DFU_H__
 #define __DFU_H__
 
+#ifdef ENV_WINDOWS
+ #ifndef __FUNCTION__
+  #define __FUNCTION__ "unknown"
+ #endif
+#endif
+
 #include <libusb.h>
 #include "usb_dfu.h"
 
@@ -55,6 +61,15 @@
 #define DFU_STATUS_ERROR_POR            0x0d
 #define DFU_STATUS_ERROR_UNKNOWN        0x0e
 #define DFU_STATUS_ERROR_STALLEDPKT     0x0f
+
+#define DFU_ERROR_NO_DEVICE             1
+#define DFU_ERROR_TOO_MUCH_DEVICES      2
+#define DFU_ERROR_COULD_NOT_OPEN_DEVICE 3
+#define DFU_ERROR_DEVICE_LOST           4
+#define DFU_ERROR_FILE_NOT_FOUND        5
+#define DFU_ERROR_FILE_NOT_SUPPORTED    6
+#define DFU_ERROR_FILE_DAMAGED          7
+
 
 /* DFU commands */
 #define DFU_DETACH      0
@@ -129,7 +144,7 @@ int dfu_get_state( libusb_device_handle *device,
 int dfu_abort( libusb_device_handle *device,
                const unsigned short interface );
 
-char* dfu_state_to_string( int state );
+const char* dfu_state_to_string( int state );
 
 const char *dfu_status_to_string(int status);
 

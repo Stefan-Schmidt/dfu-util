@@ -31,7 +31,7 @@ int add_segment(struct memsegment **segment_list, struct memsegment segment)
 {
 	struct memsegment *new_element;
 
-	new_element = malloc(sizeof(struct memsegment));
+	new_element = (struct memsegment*)malloc(sizeof(struct memsegment));
 	if (!new_element)
 		return -ENOMEM;
 	*new_element = segment;
@@ -93,7 +93,7 @@ struct memsegment *parse_memory_layout(char *intf_desc)
 	struct memsegment *segment_list = NULL;
 	struct memsegment segment;
 
-	name = malloc(strlen(intf_desc));
+	name = (char*)malloc(strlen(intf_desc));
 	if (!name) {
 		fprintf(stderr, "Error: Cannot allocate memory\n");
 		exit(1);
@@ -109,7 +109,7 @@ struct memsegment *parse_memory_layout(char *intf_desc)
 	free(name);
 
 	intf_desc += scanned;
-	typestring = malloc(strlen(intf_desc));
+	typestring = (char*)malloc(strlen(intf_desc));
 	if (!typestring) {
 		fprintf(stderr, "Error: Cannot allocate memory\n");
 		exit(1);

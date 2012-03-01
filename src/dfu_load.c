@@ -23,14 +23,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#ifndef ENV_WINDOWS
+ #include <unistd.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <string.h>
 #include <libusb.h>
 
-#include "config.h"
 #include "dfu.h"
 #include "usb_dfu.h"
 #include "dfu_file.h"
@@ -45,7 +46,7 @@ int dfuload_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 	unsigned char *buf;
 	int ret;
 
-	buf = malloc(xfer_size);
+	buf = (unsigned char*)malloc(xfer_size);
 	if (!buf)
 		return -ENOMEM;
 
@@ -61,7 +62,11 @@ int dfuload_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 			ret = rc;
 			goto out_free;
 		}
+#ifndef ENV_WINDOWS
 		write_rc = write(file.fd, buf, rc);
+#else
+		write_rc = fwrite(buf,rc,1,file.fd);
+#endif
 		if (write_rc < rc) {
 			fprintf(stderr, "Short file write: %s\n",
 				strerror(errno));
@@ -100,7 +105,7 @@ int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 	struct dfu_status dst;
 	int ret;
 
-	buf = malloc(xfer_size);
+	buf = (unsigned char*)malloc(xfer_size);
 	if (!buf)
 		return -ENOMEM;
 
@@ -124,7 +129,11 @@ int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 			chunk_size = bytes_left;
 		else
 			chunk_size = xfer_size;
-		ret = read(file.fd, buf, chunk_size);
+#ifndef ENV_WINDOWS
+      ret = read(file.fd, buf, chunk_size);
+#else
+      ret = fread(buf,1,chunk_size,file.fd);
+#endif
 		if (ret < 0) {
 			perror(file.name);
 			goto out_free;
@@ -149,9 +158,17 @@ int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 
 			/* Wait while device executes flashing */
 			if (quirks & QUIRK_POLLTIMEOUT)
+#ifndef ENV_WINDOWS
 				usleep(DEFAULT_POLLTIMEOUT * 1000);
+#else
+            Sleep(DEFAULT_POLLTIMEOUT);
+#endif
 			else
+#ifndef ENV_WINDOWS
 				usleep(dst.bwPollTimeout * 1000);
+#else
+            Sleep(dst.bwPollTimeout);
+#endif
 
 		} while (1);
 		if (dst.bStatus != DFU_STATUS_OK) {
@@ -193,7 +210,11 @@ get_status:
 		dfu_state_to_string(dst.bState), dst.bStatus,
 		dfu_status_to_string(dst.bStatus));
 	if (!(quirks & QUIRK_POLLTIMEOUT))
+#ifndef ENV_WINDOWS
 		usleep(dst.bwPollTimeout * 1000);
+#else
+		Sleep(dst.bwPollTimeout);
+#endif
 
 	/* FIXME: deal correctly with ManifestationTolerant=0 / WillDetach bits */
 	switch (dst.bState) {
@@ -201,7 +222,11 @@ get_status:
 	case DFU_STATE_dfuMANIFEST:
 		/* some devices (e.g. TAS1020b) need some time before we
 		 * can obtain the status */
+#ifndef ENV_WINDOWS
 		sleep(1);
+#else
+      Sleep(1000);
+#endif
 		goto get_status;
 		break;
 	case DFU_STATE_dfuIDLE:
