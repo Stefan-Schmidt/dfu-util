@@ -253,10 +253,10 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 			ret = rc;
 			goto out_free;
 		}
-#ifdef ENV_WINDOWS
+#ifndef ENV_WINDOWS
 		write_rc = write(file.fd, buf, rc);
 #else
-		write_rc = fwrite(buf, rc,1,file.fd);
+		write_rc = fwrite(buf, rc, 1, file.fd);
 #endif
 		if (write_rc < rc) {
 			fprintf(stderr, "Short file write: %s\n",

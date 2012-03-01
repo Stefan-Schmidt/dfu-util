@@ -972,7 +972,7 @@ int main(int argc, char **argv)
 		}
 
 		printf("Opening USB Device...\n");
-		ret==libusb_open(dif->dev, &dif->dev_handle);
+		ret = libusb_open(dif->dev, &dif->dev_handle);
 		if ((ret) || (!dif->dev_handle)) {
 			fprintf(stderr, "Cannot open device\n");
          libusb_close(dif->dev_handle);
