@@ -1055,6 +1055,10 @@ status_again:
 		printf("Warning: Transfer size can not be detected\n");
 		func_dfu.wTransferSize = 0;
 	}
+
+	if (quirks & QUIRK_FORCE_DFU11)
+		func_dfu.bcdDFUVersion = libusb_cpu_to_le16(0x0110);
+
 	printf("DFU mode device DFU version %04x\n",
 	       libusb_le16_to_cpu(func_dfu.bcdDFUVersion));
 

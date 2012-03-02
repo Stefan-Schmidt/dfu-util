@@ -27,4 +27,9 @@ void set_quirks(unsigned long vendor, unsigned long product)
 	    vendor == VENDOR_FIC ||
 	    vendor == VENDOR_VOTI)
 		quirks |= QUIRK_POLLTIMEOUT;
+
+	/* Reports wrong DFU version in DFU descriptor */
+	if (vendor == VENDOR_LEAFLABS &&
+	    product == PRODUCT_MAPLE3 )
+		quirks |= QUIRK_FORCE_DFU11;
 }
