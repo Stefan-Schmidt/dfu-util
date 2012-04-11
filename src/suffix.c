@@ -55,7 +55,10 @@ static void help(void)
 
 static void print_version(void)
 {
-	printf("dfu-suffix version %s\n", VERSION);
+	printf("dfu-suffix %s\n\n", VERSION);
+	printf("(C) 2011-2012 Stefan Schmidt\n"
+	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
+
 }
 
 static struct option opts[] = {
@@ -129,8 +132,7 @@ int main(int argc, char **argv)
 	int pid, vid, did;
 	enum mode mode = MODE_NONE;
 
-	printf("dfu-suffix - (C) 2011 - 2012 by Stefan Schmidt\n"
-	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
+	print_version();
 
 	pid = vid = did = 0xffff;
 	file.name = NULL;
@@ -148,7 +150,6 @@ int main(int argc, char **argv)
 			exit(0);
 			break;
 		case 'V':
-			print_version();
 			exit(0);
 			break;
 		case 'D':
