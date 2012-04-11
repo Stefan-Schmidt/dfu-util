@@ -129,6 +129,11 @@ int parse_dfu_suffix(struct dfu_file *file)
 		perror(file->name);
 		free(firmware);
 		return ret;
+	} else if (ret < file->size) {
+		fprintf(stderr, "Could not read whole file\n");
+		free(firmware);
+		ret = -EIO;
+		goto rewind;
 	}
 
 	for (i = 0; i < file->size - 4; i++)
@@ -242,6 +247,10 @@ int generate_dfu_suffix(struct dfu_file *file)
 		perror(file->name);
 		free(firmware);
 		return ret;
+	} else if (ret < file->size) {
+		fprintf(stderr, "Could not read whole file\n");
+		free(firmware);
+		return -EIO;
 	}
 
 	/* Copy parts of the suffix for CRC calculation */
