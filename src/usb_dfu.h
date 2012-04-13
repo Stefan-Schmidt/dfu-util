@@ -53,15 +53,7 @@ struct usb_dfu_func_descriptor {
 #define USB_REQ_DFU_GETSTATE	0x05
 #define USB_REQ_DFU_ABORT	0x06
 
-#if 0
-struct dfu_status {
-	u_int8_t bStatus;
-	u_int8_t bwPollTimeout[3];
-	u_int8_t bState;
-	u_int8_t iString;
-} __attribute__((packed));
-#endif
-
+/* DFU_GETSTATUS bStatus values (Section 6.1.2, DFU Rev 1.1) */
 #define DFU_STATUS_OK			0x00
 #define DFU_STATUS_errTARGET		0x01
 #define DFU_STATUS_errFILE		0x02
@@ -92,16 +84,5 @@ enum dfu_state {
 	DFU_STATE_dfuUPLOAD_IDLE	= 9,
 	DFU_STATE_dfuERROR		= 10,
 };
-
-/* this is the 'swapped' definition, i.e. after/before mirroring */
-struct dfu_file_suffix {
-	u_int32_t dwCRC;	/* CRC32 ANSI X3.66 */
-	u_int8_t bLength;	/* 16 bytes */
-	char ucDfuSignature[3];	/* "DFU" */
-	u_int16_t bcdDFU;	/* Version */
-	u_int16_t idVendor;	/* VendorID */
-	u_int16_t idProduct;	/* ProductID */
-	u_int16_t bcdDevice;	/* Device Revision, or 0xffff */
-} __attribute__ ((packed));
 
 #endif /* _USB_DFU_H */

@@ -203,13 +203,6 @@ get_status:
 	case DFU_STATE_dfuIDLE:
 		break;
 	}
-#if 0
-	printf("Resetting USB...\n");
-	if (usb_reset(dif->dev_handle) < 0) {
-		fprintf(stderr, "error resetting after download: %s\n",
-			usb_strerror());
-	}
-#endif
 	printf("Done!\n");
 
 out_free:

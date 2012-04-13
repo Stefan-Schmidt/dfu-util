@@ -41,11 +41,6 @@
 #include <usbpath.h>
 #endif
 
-/* ugly hack for Win32 */
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-
 int debug;
 int verbose = 0;
 
@@ -886,10 +881,6 @@ int main(int argc, char **argv)
 			libusb_exit(ctx);
 			exit(0);
 		}
-
-		/* now we need to re-scan the bus and locate our device */
-//		if (usb_find_devices() < 2)
-//			printf("not at least 2 device changes found ?!?\n");
 
 		if (dif->flags & DFU_IFF_PATH) {
 			ret = resolve_device_path(dif);

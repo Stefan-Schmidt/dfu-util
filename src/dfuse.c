@@ -32,11 +32,6 @@
 #include "dfuse.h"
 #include "dfuse_mem.h"
 
-/* ugly hack for Win32 */
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-
 #define DFU_TIMEOUT 5000
 
 extern int verbose;

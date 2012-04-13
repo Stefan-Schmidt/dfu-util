@@ -26,11 +26,6 @@
 #include "config.h"
 #endif
 
-/* ugly hack for Win32 */
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-
 enum mode {
 	MODE_NONE,
 	MODE_ADD,
