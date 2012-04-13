@@ -353,7 +353,7 @@ static int count_dfu_devices(libusb_context *ctx, struct dfu_if *dif)
 }
 
 
-static void parse_vendprod(u_int16_t *vendor, u_int16_t *product,
+static void parse_vendprod(uint16_t *vendor, uint16_t *product,
 			   const char *str)
 {
 	const char *colon;

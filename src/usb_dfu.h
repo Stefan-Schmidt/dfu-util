@@ -23,21 +23,21 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #define USB_DT_DFU			0x21
 
 struct usb_dfu_func_descriptor {
-	u_int8_t		bLength;
-	u_int8_t		bDescriptorType;
-	u_int8_t		bmAttributes;
+	uint8_t		bLength;
+	uint8_t		bDescriptorType;
+	uint8_t		bmAttributes;
 #define USB_DFU_CAN_DOWNLOAD	(1 << 0)
 #define USB_DFU_CAN_UPLOAD	(1 << 1)
 #define USB_DFU_MANIFEST_TOL	(1 << 2)
 #define USB_DFU_WILL_DETACH	(1 << 3)
-	u_int16_t		wDetachTimeOut;
-	u_int16_t		wTransferSize;
-	u_int16_t		bcdDFUVersion;
+	uint16_t		wDetachTimeOut;
+	uint16_t		wTransferSize;
+	uint16_t		bcdDFUVersion;
 } __attribute__ ((packed));
 
 #define USB_DT_DFU_SIZE			9

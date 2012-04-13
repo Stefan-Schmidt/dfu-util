@@ -7,12 +7,12 @@ struct dfu_file {
     FILE *filep;
     off_t size;
     /* From DFU suffix fields */
-    u_int32_t dwCRC;
+    uint32_t dwCRC;
     unsigned char suffixlen;
-    u_int16_t bcdDFU;
-    u_int16_t idVendor;
-    u_int16_t idProduct;
-    u_int16_t bcdDevice;
+    uint16_t bcdDFU;
+    uint16_t idVendor;
+    uint16_t idProduct;
+    uint16_t bcdDevice;
 };
 
 int parse_dfu_suffix(struct dfu_file *file);

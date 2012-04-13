@@ -91,14 +91,14 @@ struct dfu_status {
 };
 
 struct dfu_if {
-    u_int16_t vendor;
-    u_int16_t product;
-    u_int8_t configuration;
-    u_int8_t interface;
-    u_int8_t altsetting;
+    uint16_t vendor;
+    uint16_t product;
+    uint8_t configuration;
+    uint8_t interface;
+    uint8_t altsetting;
     unsigned char *alt_name;
     int bus;
-    u_int8_t devnum;
+    uint8_t devnum;
     const char *path;
     unsigned int flags;
     unsigned int count;
