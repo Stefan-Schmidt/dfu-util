@@ -27,6 +27,10 @@
 
 #define USB_DT_DFU			0x21
 
+#ifdef _MSC_VER
+# pragma pack(push)
+# pragma pack(1)
+#endif /* _MSC_VER */
 struct usb_dfu_func_descriptor {
 	uint8_t		bLength;
 	uint8_t		bDescriptorType;
@@ -38,7 +42,14 @@ struct usb_dfu_func_descriptor {
 	uint16_t		wDetachTimeOut;
 	uint16_t		wTransferSize;
 	uint16_t		bcdDFUVersion;
+#ifdef _MSC_VER
+};
+# pragma pack(pop)
+#elif defined __GNUC__
 } __attribute__ ((packed));
+#else
+ #warning "No way to pack struct on this compiler? This will break!"
+#endif /* _MSC_VER */
 
 #define USB_DT_DFU_SIZE			9
 
