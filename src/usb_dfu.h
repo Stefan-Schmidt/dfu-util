@@ -93,7 +93,7 @@ enum dfu_state {
 	DFU_STATE_dfuMANIFEST		= 7,
 	DFU_STATE_dfuMANIFEST_WAIT_RST	= 8,
 	DFU_STATE_dfuUPLOAD_IDLE	= 9,
-	DFU_STATE_dfuERROR		= 10,
+	DFU_STATE_dfuERROR		= 10
 };
 
 #endif /* _USB_DFU_H */

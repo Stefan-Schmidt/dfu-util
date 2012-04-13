@@ -33,7 +33,7 @@ enum mode {
 	MODE_NONE,
 	MODE_ADD,
 	MODE_DEL,
-	MODE_CHECK,
+	MODE_CHECK
 };
 
 static void help(void)

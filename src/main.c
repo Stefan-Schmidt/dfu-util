@@ -533,19 +533,19 @@ static int get_cached_extra_descriptor(struct libusb_device *dev,
 
 static void help(void)
 {
-	printf("Usage: dfu-util [options] ...\n"
+	printf( "Usage: dfu-util [options] ...\n"
 		"  -h --help\t\t\tPrint this help message\n"
 		"  -V --version\t\t\tPrint the version number\n"
 		"  -v --verbose\t\t\tPrint verbose debug statements\n"
-		"  -l --list\t\t\tList the currently attached DFU capable USB devices\n"
-		"  -e --detach\t\t\tDetach the currently attached DFU capable USB devices\n"
+		"  -l --list\t\t\tList the currently attached DFU capable USB devices\n");
+	printf(	"  -e --detach\t\t\tDetach the currently attached DFU capable USB devices\n"
 		"  -d --device vendor:product\tSpecify Vendor/Product ID of DFU device\n"
 		"  -p --path bus-port. ... .port\tSpecify path to DFU device\n"
 		"  -c --cfg config_nr\t\tSpecify the Configuration of DFU device\n"
 		"  -i --intf intf_nr\t\tSpecify the DFU Interface number\n"
 		"  -a --alt alt\t\t\tSpecify the Altsetting of the DFU Interface\n"
-		"\t\t\t\tby name or by number\n"
-		"  -t --transfer-size\t\tSpecify the number of bytes per USB Transfer\n"
+		"\t\t\t\tby name or by number\n");
+	printf(	"  -t --transfer-size\t\tSpecify the number of bytes per USB Transfer\n"
 		"  -U --upload file\t\tRead firmware from device into <file>\n"
 		"  -D --download file\t\tWrite firmware from <file> into device\n"
 		"  -R --reset\t\t\tIssue USB Reset signalling once we're finished\n"
@@ -584,7 +584,7 @@ static struct option opts[] = {
 	{ "upload", 1, 0, 'U' },
 	{ "download", 1, 0, 'D' },
 	{ "reset", 0, 0, 'R' },
-	{ "dfuse-address", 1, 0, 's' },
+	{ "dfuse-address", 1, 0, 's' }
 };
 
 enum mode {
@@ -593,7 +593,7 @@ enum mode {
 	MODE_LIST,
 	MODE_DETACH,
 	MODE_UPLOAD,
-	MODE_DOWNLOAD,
+	MODE_DOWNLOAD
 };
 
 int main(int argc, char **argv)
@@ -606,6 +606,7 @@ int main(int argc, char **argv)
 	struct dfu_status status;
 	struct usb_dfu_func_descriptor func_dfu = {0}, func_dfu_rt = {0};
 	libusb_context *ctx;
+	struct libusb_device_descriptor desc;
 	struct dfu_file file;
 	char *alt_name = NULL; /* query alt name if non-NULL */
 	char *device_id_filter = NULL;
@@ -1089,7 +1090,6 @@ status_again:
 #endif /* HAVE_GETPAGESIZE */
 
 	/* DFU specification */
-	struct libusb_device_descriptor desc;
 	if (libusb_get_device_descriptor(dif->dev, &desc)) {
 		fprintf(stderr, "Error: Failed to get device descriptor\n");
 		exit(1);

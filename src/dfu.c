@@ -374,37 +374,38 @@ char* dfu_state_to_string( int state )
 
 /* Chapter 6.1.2 */
 static const char *dfu_status_names[] = {
-	[DFU_STATUS_OK]			= "No error condition is present",
-	[DFU_STATUS_errTARGET]		= 
+	/* DFU_STATUS_OK */
+		"No error condition is present",
+	/* DFU_STATUS_errTARGET */
 		"File is not targeted for use by this device",
-	[DFU_STATUS_errFILE]		=
+	/* DFU_STATUS_errFILE */
 		"File is for this device but fails some vendor-specific test",
-	[DFU_STATUS_errWRITE]		=
+	/* DFU_STATUS_errWRITE */
 		"Device is unable to write memory",
-	[DFU_STATUS_errERASE]		=
+	/* DFU_STATUS_errERASE */
 		"Memory erase function failed",
-	[DFU_STATUS_errCHECK_ERASED]	=
+	/* DFU_STATUS_errCHECK_ERASED */
 		"Memory erase check failed",
-	[DFU_STATUS_errPROG]		=
+	/* DFU_STATUS_errPROG */
 		"Program memory function failed",
-	[DFU_STATUS_errVERIFY]		=
+	/* DFU_STATUS_errVERIFY */
 		"Programmed memory failed verification",
-	[DFU_STATUS_errADDRESS]		=
+	/* DFU_STATUS_errADDRESS */
 		"Cannot program memory due to received address that is out of range",
-	[DFU_STATUS_errNOTDONE]		=
+	/* DFU_STATUS_errNOTDONE */
 		"Received DFU_DNLOAD with wLength = 0, but device does not think that it has all data yet",
-	[DFU_STATUS_errFIRMWARE]	=
+	/* DFU_STATUS_errFIRMWARE */
 		"Device's firmware is corrupt. It cannot return to run-time (non-DFU) operations",
-	[DFU_STATUS_errVENDOR]		=
+	/* DFU_STATUS_errVENDOR */
 		"iString indicates a vendor specific error",
-	[DFU_STATUS_errUSBR]		=
+	/* DFU_STATUS_errUSBR */
 		"Device detected unexpected USB reset signalling",
-	[DFU_STATUS_errPOR]		=
+	/* DFU_STATUS_errPOR */
 		"Device detected unexpected power on reset",
-	[DFU_STATUS_errUNKNOWN]		=
+	/* DFU_STATUS_errUNKNOWN */
 		"Something went wrong, but the device does not know what it was",
-	[DFU_STATUS_errSTALLEDPKT]	=
-		"Device stalled an unexpected request",
+	/* DFU_STATUS_errSTALLEDPKT */
+		"Device stalled an unexpected request"
 };
 
 
