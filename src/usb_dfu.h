@@ -1,5 +1,5 @@
-#ifndef _USB_DFU_H
-#define _USB_DFU_H
+#ifndef USB_DFU_H
+#define USB_DFU_H
 /* USB Device Firmware Update Implementation for OpenPCD
  * (C) 2006 by Harald Welte <hwelte@hmw-consulting.de>
  *
@@ -96,4 +96,4 @@ enum dfu_state {
 	DFU_STATE_dfuERROR		= 10
 };
 
-#endif /* _USB_DFU_H */
+#endif /* USB_DFU_H */

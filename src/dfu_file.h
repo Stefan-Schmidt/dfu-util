@@ -1,6 +1,6 @@
 
-#ifndef _DFU_FILE_H
-#define _DFU_FILE_H
+#ifndef DFU_FILE_H
+#define DFU_FILE_H
 
 #include <stdio.h>
 #include <stdint.h>
@@ -21,4 +21,4 @@ struct dfu_file {
 int parse_dfu_suffix(struct dfu_file *file);
 int generate_dfu_suffix(struct dfu_file *file);
 
-#endif
+#endif /* DFU_FILE_H */

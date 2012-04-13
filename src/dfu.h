@@ -18,8 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __DFU_H__
-#define __DFU_H__
+#ifndef DFU_H
+#define DFU_H
 
 #include <libusb.h>
 #include "usb_dfu.h"
@@ -134,4 +134,5 @@ const char *dfu_state_to_string( int state );
 const char *dfu_status_to_string( int status );
 
 int debug;
-#endif
+
+#endif /* DFU_H */

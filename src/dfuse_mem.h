@@ -18,8 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _DFUSE_MEM_H
-#define _DFUSE_MEM_H
+#ifndef DFUSE_MEM_H
+#define DFUSE_MEM_H
 
 #define DFUSE_READABLE  1
 #define DFUSE_ERASABLE  2
@@ -41,4 +41,4 @@ void free_segment_list(struct memsegment *list);
 
 struct memsegment *parse_memory_layout(char *intf_desc_str);
 
-#endif
+#endif /* DFUSE_MEM_H */

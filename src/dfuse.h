@@ -18,8 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _DFUSE_H
-#define _DFUSE_H
+#ifndef DFUSE_H
+#define DFUSE_H
 
 #include <dfu.h>
 
@@ -32,4 +32,4 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 		    unsigned int address);
 
-#endif
+#endif /* DFUSE_H */
