@@ -555,12 +555,9 @@ static void help(void)
 static void print_version(void)
 {
 	printf("dfu-util %s\n\n", VERSION);
-	printf("(C) 2005-2008 by Weston Schmidt, Harald Welte and OpenMoko Inc.\n"
-	       "(C) 2010-2011 Tormod Volden (DfuSe support)\n"
+	printf("Copyright 2005-2008 Weston Schmidt, Harald Welte and OpenMoko Inc.\n"
+	       "Copyright 2010-2012 Tormod Volden and Stefan Schmidt\n"
 	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
-
-	printf("dfu-util does currently only support DFU version 1.0\n\n");
-
 }
 
 static struct option opts[] = {
