@@ -24,8 +24,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <string.h>
 #include <libusb.h>
@@ -61,7 +59,7 @@ int dfuload_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 			ret = rc;
 			goto out_free;
 		}
-		write_rc = write(file.fd, buf, rc);
+		write_rc = fwrite(buf, 1, rc, file.filep);
 		if (write_rc < rc) {
 			fprintf(stderr, "Short file write: %s\n",
 				strerror(errno));
@@ -108,9 +106,7 @@ int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 	if (bytes_per_hash == 0)
 		bytes_per_hash = 1;
 	printf("bytes_per_hash=%u\n", bytes_per_hash);
-#if 0
-	read(file.fd, DFU_HDR);
-#endif
+
 	printf("Copying data from PC to DFU device\n");
 	printf("Starting download: [");
 	fflush(stdout);
@@ -124,7 +120,7 @@ int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 			chunk_size = bytes_left;
 		else
 			chunk_size = xfer_size;
-		ret = read(file.fd, buf, chunk_size);
+		ret = fread(buf, 1, chunk_size, file.filep);
 		if (ret < 0) {
 			perror(file.name);
 			goto out_free;

@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <getopt.h>
-#include <fcntl.h>
 
 #include "dfu_file.h"
 #ifdef HAVE_CONFIG_H
@@ -97,12 +96,18 @@ static void remove_suffix(struct dfu_file *file)
 	if (ret <= 0)
 		exit(1);
 
-	ret = ftruncate(file->fd, (int)file->size - file->suffixlen);
+#ifdef HAVE_FTRUNCATE
+	/* There is no easy way to truncate to a size with stdio */
+	ret = ftruncate(fileno(file->filep),
+			(long) file->size - file->suffixlen);
 	if (ret < 0) {
-		perror("truncate");
+		perror("ftruncate");
 		exit(1);
 	}
 	printf("DFU suffix removed\n");
+#else
+	printf("Suffix removal not implemented on this platform\n");
+#endif /* HAVE_FTRUNCATE */
 }
 
 static void add_suffix(struct dfu_file *file, int pid, int vid, int did) {
@@ -186,8 +191,8 @@ int main(int argc, char **argv)
 	}
 
 	if (mode != MODE_NONE) {
-		file.fd = open(file.name, O_RDWR|O_BINARY);
-		if (file.fd < 0) {
+		file.filep = fopen(file.name, "r+b");
+		if (file.filep == NULL) {
 			perror(file.name);
 			exit(1);
 		}
@@ -198,6 +203,7 @@ int main(int argc, char **argv)
 		add_suffix(&file, pid, vid, did);
 		break;
 	case MODE_CHECK:
+		/* FIXME: could open read-only here */
 		check_suffix(&file);
 		break;
 	case MODE_DEL:
@@ -208,6 +214,6 @@ int main(int argc, char **argv)
 		exit(2);
 	}
 
-	close(file.fd);
+	fclose(file.filep);
 	exit(0);
 }

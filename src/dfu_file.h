@@ -4,7 +4,7 @@
 
 struct dfu_file {
     const char *name;
-    int fd;
+    FILE *filep;
     off_t size;
     /* From DFU suffix fields */
     u_int32_t dwCRC;

@@ -28,7 +28,6 @@
 #include <getopt.h>
 #include <libusb.h>
 #include <errno.h>
-#include <fcntl.h>
 
 #include "dfu.h"
 #include "usb_dfu.h"
@@ -1109,9 +1108,15 @@ status_again:
 
 	switch (mode) {
 	case MODE_UPLOAD:
-		file.fd = open(file.name, O_WRONLY|O_CREAT|O_EXCL, 0644);
-		if (file.fd < 0) {
+		/* open for "exclusive" writing in a portable way */
+		file.filep = fopen(file.name, "ab");
+		if (file.filep == NULL) {
 			perror(file.name);
+			exit(1);
+		}
+		if (ftell(file.filep)) {
+			fprintf(stderr, "%s: File exists\n", file.name);
+			fclose(file.filep);
 			exit(1);
 		}
 		if (dfuse) {
@@ -1122,11 +1127,11 @@ status_again:
 		    if (dfuload_do_upload(dif, transfer_size, file) < 0)
 			exit(1);
 		}
-		close(file.fd);
+		fclose(file.filep);
 		break;
 	case MODE_DOWNLOAD:
-		file.fd = open(file.name, O_RDONLY|O_BINARY);
-		if (file.fd < 0) {
+		file.filep = fopen(file.name, "rb");
+		if (file.filep == NULL) {
 			perror(file.name);
 			exit(1);
 		}
@@ -1158,7 +1163,7 @@ status_again:
 			if (dfuload_do_dnload(dif, transfer_size, file) < 0)
 				exit(1);
 	 	}
-		close(file.fd);
+		fclose(file.filep);
 		break;
 	default:
 		fprintf(stderr, "Unsupported mode: %u\n", mode);

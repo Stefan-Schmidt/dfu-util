@@ -22,10 +22,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/stat.h>
 
 #include "config.h"
 #include "dfu.h"
@@ -234,12 +232,13 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 	transaction = 2;
 	while (1) {
 		int rc, write_rc;
+
 		rc = dfuse_upload(dif, xfer_size, buf, transaction++);
 		if (rc < 0) {
 			ret = rc;
 			goto out_free;
 		}
-		write_rc = write(file.fd, buf, rc);
+		write_rc = fwrite(buf, 1, rc, file.filep);
 		if (write_rc < rc) {
 			fprintf(stderr, "Short file write: %s\n",
 				strerror(errno));
@@ -399,7 +398,7 @@ int dfuse_do_bin_dnload(struct dfu_if *dif, int xfer_size,
 		fprintf(stderr, "Could not allocate data buffer\n");
 		return -ENOMEM;
 	}
-	ret = read(file.fd, data, dwElementSize);
+	ret = fread(data, 1, dwElementSize, file.filep);
 	read_bytes += ret;
 	if (ret < dwElementSize) {
 		fprintf(stderr, "Could not read data\n");
@@ -448,7 +447,7 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 		return -EINVAL;
 	}
 
-	ret = read(file.fd, dfuprefix, sizeof(dfuprefix));
+	ret = fread(dfuprefix, 1, sizeof(dfuprefix), file.filep);
 	if (ret < (int)sizeof(dfuprefix)) {
 		fprintf(stderr, "Could not read DfuSe header\n");
 		return -EIO;
@@ -468,7 +467,7 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 
 	for (image = 1; image <= bTargets; image++) {
 		printf("parsing DFU image %i\n", image);
-		ret = read(file.fd, targetprefix, sizeof(targetprefix));
+		ret = fread(targetprefix, 1, sizeof(targetprefix), file.filep);
 		read_bytes += ret;
 		if (ret < sizeof(targetprefix)) {
 			fprintf(stderr, "Could not read DFU header\n");
@@ -491,8 +490,8 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 			       " to download this image!\n");
 		for (element = 1; element <= dwNbElements; element++) {
 			printf("parsing element %i, ", element);
-			ret =
-			    read(file.fd, elementheader, sizeof(elementheader));
+			ret = fread(elementheader, 1, sizeof(elementheader),
+				    file.filep);
 			read_bytes += ret;
 			if (ret < sizeof(elementheader)) {
 				fprintf(stderr,
@@ -519,7 +518,7 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 					"Could not allocate data buffer\n");
 				return -ENOMEM;
 			}
-			ret = read(file.fd, data, dwElementSize);
+			ret = fread(data, 1, dwElementSize, file.filep);
 			read_bytes += ret;
 			if (ret < dwElementSize) {
 				fprintf(stderr, "Could not read data\n");
@@ -546,7 +545,7 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 		fprintf(stderr, "Could not allocate data buffer for suffix\n");
 		return -ENOMEM;
 	}
-	ret = read(file.fd, data, file.suffixlen);
+	ret = fread(data, 1, file.suffixlen, file.filep);
 	free(data);
 	if (ret < file.suffixlen) {
 		fprintf(stderr, "Could not read through suffix\n");
