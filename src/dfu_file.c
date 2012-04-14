@@ -174,6 +174,7 @@ int parse_dfu_suffix(struct dfu_file *file)
 
 	if (file->dwCRC != crc) {
 		fprintf(stderr, "DFU CRC does not match\n");
+		ret = 0;
 		goto rewind;
 	}
 
