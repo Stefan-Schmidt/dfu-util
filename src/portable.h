@@ -7,6 +7,7 @@
 #endif
 
 #ifdef HAVE_USLEEP
+# include <unistd.h>
 # define milli_sleep(msec) usleep(1000 * (msec))
 #elif defined HAVE_WINDOWS_H
 # define milli_sleep(msec) Sleep(msec)

@@ -19,12 +19,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <getopt.h>
 
 #include "dfu_file.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+#ifdef HAVE_FTRUNCATE
+# include <unistd.h>
 #endif
 
 enum mode {
