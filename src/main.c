@@ -43,9 +43,6 @@
 int debug;
 int verbose = 0;
 
-/* If we really have to guess (non-compliant devices) */
-#define DEFAULT_TRANSFER_SIZE 1024
-
 /* USB string descriptor should contain max 126 UTF-16 characters
  * but 253 would even accomodate any UTF-8 encoding */
 #define MAX_DESC_STR_LEN 253
@@ -1055,6 +1052,7 @@ status_again:
 		func_dfu.bcdDFUVersion = libusb_cpu_to_le16(0x0100);
 	} else if (ret < 9) {
 		printf("Error obtaining DFU functional descriptor\n");
+		printf("Please report this as a bug!\n");
 		printf("Warning: Assuming DFU version 1.0\n");
 		func_dfu.bcdDFUVersion = libusb_cpu_to_le16(0x0100);
 		printf("Warning: Transfer size can not be detected\n");
@@ -1066,16 +1064,17 @@ status_again:
 	if (func_dfu.bcdDFUVersion == libusb_cpu_to_le16(0x11a))
 		dfuse = 1;
 
+	/* If not overridden by the user */
 	if (!transfer_size) {
 		transfer_size = libusb_le16_to_cpu(func_dfu.wTransferSize);
-		printf("Device returned transfer size %i\n", transfer_size);
-	}
-
-	/* if returned zero or not detected (and not user specified) */
-	if (!transfer_size) {
-		transfer_size = DEFAULT_TRANSFER_SIZE;
-		printf("Warning: Trying default transfer size %i\n",
-			transfer_size);
+		if (transfer_size) {
+			printf("Device returned transfer size %i\n",
+			       transfer_size);
+		} else {
+			fprintf(stderr, "Error: Transfer size must be "
+				"specified\n");
+			exit(1);
+		}
 	}
 
 #ifdef HAVE_GETPAGESIZE
