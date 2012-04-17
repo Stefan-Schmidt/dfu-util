@@ -698,8 +698,8 @@ int main(int argc, char **argv)
 			if (strcmp(optarg, "default")) {
 			    dfuse_address = strtoul(optarg, &end, 0);
 			    if (!dfuse_address || (*end)) {
-				fprintf(stderr, "invalid dfuse address: %s\n",
-					optarg);
+				fprintf(stderr, "Error: Invalid dfuse address: "
+					"%s\n", optarg);
 				exit(2);
 			    }
 			}

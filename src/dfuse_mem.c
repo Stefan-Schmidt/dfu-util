@@ -100,7 +100,7 @@ struct memsegment *parse_memory_layout(char *intf_desc)
 	}
 	ret = sscanf(intf_desc, "@%[^/]%n", name, &scanned);
 	if (ret < 1) {
-		fprintf(stderr, "Error: Could not read name, sscanf returned"
+		fprintf(stderr, "Error: Could not read name, sscanf returned "
 			"%d\n", ret);
 		free(name);
 		return NULL;

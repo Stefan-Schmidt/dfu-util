@@ -345,19 +345,24 @@ int dfuse_dnload_element(struct dfu_if *dif, unsigned int dwElementAddress,
 			if (((address + chunk_size - 1) & ~(page_size - 1)) !=
 			    (last_erased & ~(page_size - 1))) {
 				if (verbose > 2)
-					printf(" Chunk wraps over to next page"
-					       "\n");
+					printf(" Chunk extends into next page,"
+					       " erase it as well\n");
 				dfuse_special_command(dif,
 						      address + chunk_size - 1,
 						      ERASE_PAGE);
 			}
 		}
 
-		if (verbose)
+		if (verbose) {
 			printf(" Download from image offset "
 			       "%08x to memory %08x-%08x, size %i\n",
 			       p, address, address + chunk_size - 1,
 			       chunk_size);
+		} else {
+			printf(".");
+			fflush(stdout);
+		}
+		
 		dfuse_special_command(dif, address, SET_ADDRESS);
 
 		/* transaction = 2 for no address offset */
@@ -368,6 +373,8 @@ int dfuse_dnload_element(struct dfu_if *dif, unsigned int dwElementAddress,
 			return -EINVAL;
 		}
 	}
+	if (!verbose)
+		printf("\n"); /* terminate line of dots */
 	return 0;
 }
 
@@ -383,9 +390,8 @@ int dfuse_do_bin_dnload(struct dfu_if *dif, int xfer_size,
 
 	dwElementAddress = start_address;
 	dwElementSize = file.size;
-	if (verbose)
-		printf("Uploading to address = 0x%08x, size = %i\n",
-		       dwElementAddress, dwElementSize);
+	printf("Downloading to address = 0x%08x, size = %i\n",
+	       dwElementAddress, dwElementSize);
 
 	data = malloc(dwElementSize);
 	if (!data) {
@@ -409,6 +415,7 @@ int dfuse_do_bin_dnload(struct dfu_if *dif, int xfer_size,
 		fprintf(stderr, "Warning: Read %i bytes, file size %li\n",
 			read_bytes, file.size);
 	}
+	printf("File downloaded successfully\n");
 	ret = read_bytes;
 
  out_free:
@@ -575,6 +582,8 @@ int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 		if (file.bcdDFU != 0x11a) {
 			fprintf(stderr, "Error: Only DfuSe file version 1.1a "
 				"is supported\n");
+			fprintf(stderr, "(for raw binary download, use the "
+				"--dfuse-address option)\n");
 			return -EINVAL;
 		}
 		return dfuse_do_dfuse_dnload(dif, xfer_size, file);
