@@ -1063,7 +1063,7 @@ status_again:
 	printf("DFU mode device DFU version %04x\n",
 	       libusb_le16_to_cpu(func_dfu.bcdDFUVersion));
 
-	if (func_dfu.bcdDFUVersion == 0x11a)
+	if (func_dfu.bcdDFUVersion == libusb_cpu_to_le16(0x11a))
 		dfuse = 1;
 
 	if (!transfer_size) {
