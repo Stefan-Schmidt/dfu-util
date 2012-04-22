@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "config.h"
+#include "portable.h"
 #include "dfu.h"
 #include "usb_dfu.h"
 #include "dfu_file.h"
@@ -156,7 +156,7 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 		exit(1);
 	}
 	/* wait while command is executed */
-	usleep(dst.bwPollTimeout * 1000);
+	milli_sleep(dst.bwPollTimeout);
 
 	ret = dfu_get_status(dif->dev_handle, dif->interface, &dst);
 	if (ret < 0) {
@@ -167,7 +167,7 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 		fprintf(stderr, "Error: Command not correctly executed\n");
 		exit(1);
 	}
-	usleep(dst.bwPollTimeout * 1000);
+	milli_sleep(dst.bwPollTimeout);
 
 	ret = dfu_abort(dif->dev_handle, dif->interface);
 	if (ret < 0) {
@@ -183,7 +183,7 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 		fprintf(stderr, "Error: Failed to enter idle state on abort\n");
 		exit(1);
 	}
-	usleep(dst.bwPollTimeout * 1000);
+	milli_sleep(dst.bwPollTimeout);
 	return ret;
 }
 
@@ -284,7 +284,7 @@ int dfuse_dnload_chunk(struct dfu_if *dif, unsigned char *data, int size,
 			fprintf(stderr, "Error during download get_status\n");
 			return ret;
 		}
-		usleep(dst.bwPollTimeout * 1000);
+		milli_sleep(dst.bwPollTimeout);
 	} while (dst.bState != DFU_STATE_dfuDNLOAD_IDLE &&
 		 dst.bState != DFU_STATE_dfuERROR);
 

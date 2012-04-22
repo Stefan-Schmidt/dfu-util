@@ -29,15 +29,13 @@
 #include <libusb.h>
 #include <errno.h>
 
+#include "portable.h"
 #include "dfu.h"
 #include "usb_dfu.h"
 #include "dfu_file.h"
 #include "dfu_load.h"
 #include "dfuse.h"
 #include "quirks.h"
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 #ifdef HAVE_USBPATH_H
 #include <usbpath.h>
@@ -839,7 +837,7 @@ int main(int argc, char **argv)
 		printf("state = %s, status = %d\n", 
 		       dfu_state_to_string(status.bState), status.bStatus);
 		if (!(quirks & QUIRK_POLLTIMEOUT))
-			usleep(status.bwPollTimeout * 1000);
+			milli_sleep(status.bwPollTimeout);
 
 		switch (status.bState) {
 		case DFU_STATE_appIDLE:
@@ -863,7 +861,7 @@ int main(int argc, char **argv)
 					fprintf(stderr, "error resetting "
 						"after detach\n");
 			}
-			sleep(2);
+			milli_sleep(2000);
 			break;
 		case DFU_STATE_dfuERROR:
 			printf("dfuERROR, clearing status\n");
@@ -1001,7 +999,7 @@ status_again:
 	printf("state = %s, status = %d\n",
 	       dfu_state_to_string(status.bState), status.bStatus);
 	if (!(quirks & QUIRK_POLLTIMEOUT))
-		usleep(status.bwPollTimeout * 1000);
+		milli_sleep(status.bwPollTimeout);
 
 	switch (status.bState) {
 	case DFU_STATE_appIDLE:
@@ -1043,7 +1041,7 @@ status_again:
 			exit(1);
 		}
 		if (!(quirks & QUIRK_POLLTIMEOUT))
-			usleep(status.bwPollTimeout * 1000);
+			milli_sleep(status.bwPollTimeout);
 	}
 
 	/* Get the DFU mode DFU functional descriptor

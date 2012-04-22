@@ -2,6 +2,7 @@ AM_CFLAGS = -Wall
 
 bin_PROGRAMS = dfu-util dfu-suffix
 dfu_util_SOURCES = main.c \
+		portable.h \
 		dfu_load.c \
 		dfu_load.h \
 		dfuse.c \

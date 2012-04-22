@@ -28,7 +28,7 @@
 #include <string.h>
 #include <libusb.h>
 
-#include "config.h"
+#include "portable.h"
 #include "dfu.h"
 #include "usb_dfu.h"
 #include "dfu_file.h"
@@ -145,9 +145,9 @@ int dfuload_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file)
 
 			/* Wait while device executes flashing */
 			if (quirks & QUIRK_POLLTIMEOUT)
-				usleep(DEFAULT_POLLTIMEOUT * 1000);
+				milli_sleep(DEFAULT_POLLTIMEOUT);
 			else
-				usleep(dst.bwPollTimeout * 1000);
+				milli_sleep(dst.bwPollTimeout);
 
 		} while (1);
 		if (dst.bStatus != DFU_STATUS_OK) {
@@ -189,7 +189,7 @@ get_status:
 		dfu_state_to_string(dst.bState), dst.bStatus,
 		dfu_status_to_string(dst.bStatus));
 	if (!(quirks & QUIRK_POLLTIMEOUT))
-		usleep(dst.bwPollTimeout * 1000);
+		milli_sleep(dst.bwPollTimeout);
 
 	/* FIXME: deal correctly with ManifestationTolerant=0 / WillDetach bits */
 	switch (dst.bState) {
@@ -197,7 +197,7 @@ get_status:
 	case DFU_STATE_dfuMANIFEST:
 		/* some devices (e.g. TAS1020b) need some time before we
 		 * can obtain the status */
-		sleep(1);
+		milli_sleep(1000);
 		goto get_status;
 		break;
 	case DFU_STATE_dfuIDLE:
