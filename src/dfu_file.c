@@ -110,7 +110,7 @@ int parse_dfu_suffix(struct dfu_file *file)
 		return 0;
 	}
 
-	firmware = malloc(file->size);
+	firmware = (unsigned char*) malloc(file->size);
 	if (!firmware) {
 		fprintf(stderr, "Unable to allocate file buffer for firmware.\n");
 		exit(1);
@@ -224,7 +224,8 @@ int generate_dfu_suffix(struct dfu_file *file)
 	file->size = ftell(file->filep);
 	rewind(file->filep);
 
-	firmware = malloc(file->size + file->suffixlen - 4); /* All but CRC */
+	/* Make space for all but CRC */
+	firmware = (unsigned char*) malloc(file->size + file->suffixlen - 4);
 	if (!firmware) {
 		fprintf(stderr, "Unable to allocate file buffer for firmware.\n");
 		exit(1);

@@ -329,9 +329,9 @@ int dfu_abort( libusb_device_handle *device,
 }
 
 
-char* dfu_state_to_string( int state )
+const char* dfu_state_to_string( int state )
 {
-    char *message = NULL;
+    const char *message = NULL;
 
     switch( state ) {
         case STATE_APP_IDLE:

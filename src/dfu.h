@@ -129,9 +129,9 @@ int dfu_get_state( libusb_device_handle *device,
 int dfu_abort( libusb_device_handle *device,
                const unsigned short interface );
 
-char* dfu_state_to_string( int state );
+const char *dfu_state_to_string( int state );
 
-const char *dfu_status_to_string(int status);
+const char *dfu_status_to_string( int status );
 
 int debug;
 #endif

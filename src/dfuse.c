@@ -406,8 +406,8 @@ int dfuse_do_bin_dnload(struct dfu_if *dif, int xfer_size,
 		goto out_free;
 
 	if (read_bytes != file.size) {
-		fprintf(stderr, "Warning: Read %i bytes, file size %i\n",
-			read_bytes, (int)file.size);
+		fprintf(stderr, "Warning: Read %i bytes, file size %li\n",
+			read_bytes, file.size);
 	}
 	ret = read_bytes;
 
@@ -548,8 +548,8 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 	read_bytes += ret;
 
 	if (read_bytes != file.size) {
-		fprintf(stderr, "Warning: Read %i bytes, file size %i\n",
-			read_bytes, (int)file.size);
+		fprintf(stderr, "Warning: Read %i bytes, file size %li\n",
+			read_bytes, file.size);
 	}
 
 	printf("done parsing DfuSe file\n");

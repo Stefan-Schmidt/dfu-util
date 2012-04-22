@@ -123,7 +123,7 @@ static int find_dfu_if(libusb_device *dev,
 
 static int _get_first_cb(struct dfu_if *dif, void *v)
 {
-	struct dfu_if *v_dif = v;
+	struct dfu_if *v_dif = (struct dfu_if*) v;
 
 	/* Copy everything except the device handle.
 	 * This depends heavily on this member being last! */
@@ -141,7 +141,7 @@ static int get_first_dfu_if(struct dfu_if *dif)
 
 static int _check_match_cb(struct dfu_if *dif, void *v)
 {
-	struct dfu_if *v_dif = v;
+	struct dfu_if *v_dif = (struct dfu_if*) v;
 
 	if (v_dif->flags & DFU_IFF_IFACE && 
 	    dif->interface != v_dif->interface)
@@ -160,7 +160,7 @@ static int get_matching_dfu_if(struct dfu_if *dif)
 
 static int _count_match_cb(struct dfu_if *dif, void *v)
 {
-	struct dfu_if *v_dif = v;
+	struct dfu_if *v_dif = (struct dfu_if*) v;
 
 	if (v_dif->flags & DFU_IFF_IFACE && 
 	    dif->interface != v_dif->interface)
@@ -260,7 +260,7 @@ static int alt_by_name(struct dfu_if *dfu_if, void *v)
 
 static int _count_cb(struct dfu_if *dif, void *v)
 {
-	int *count = v;
+	int *count = (int*) v;
 
 	(*count)++;
 
@@ -319,7 +319,7 @@ static int iterate_dfu_devices(libusb_context *ctx, struct dfu_if *dif,
 
 static int found_dfu_device(struct libusb_device *dev, void *user)
 {
-	struct dfu_if *dif = user;
+	struct dfu_if *dif = (struct dfu_if*) user;
 
 	dif->dev = dev;
 	return 1;
@@ -335,7 +335,7 @@ static int get_first_dfu_device(libusb_context *ctx, struct dfu_if *dif)
 
 static int count_one_dfu_device(struct libusb_device *dev, void *user)
 {
-	int *num = user;
+	int *num = (int*) user;
 
 	(*num)++;
 	return 0;

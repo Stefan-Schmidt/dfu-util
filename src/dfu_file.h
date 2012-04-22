@@ -2,10 +2,13 @@
 #ifndef _DFU_FILE_H
 #define _DFU_FILE_H
 
+#include <stdio.h>
+#include <stdint.h>
+
 struct dfu_file {
     const char *name;
     FILE *filep;
-    off_t size;
+    long size;
     /* From DFU suffix fields */
     uint32_t dwCRC;
     unsigned char suffixlen;
