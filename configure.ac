@@ -34,7 +34,7 @@ AC_TYPE_SIZE_T
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
-AC_CHECK_FUNCS([memset ftruncate])
+AC_CHECK_FUNCS([memset ftruncate getpagesize])
 
 AC_CONFIG_FILES(Makefile src/Makefile doc/Makefile)
 AC_OUTPUT

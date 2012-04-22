@@ -610,7 +610,6 @@ int main(int argc, char **argv)
 	int num_devs;
 	int num_ifs;
 	unsigned int transfer_size = 0;
-	unsigned int host_page_size;
 	enum mode mode = MODE_NONE;
 	struct dfu_status status;
 	struct usb_dfu_func_descriptor func_dfu = {0}, func_dfu_rt = {0};
@@ -625,7 +624,6 @@ int main(int argc, char **argv)
 	int dfuse = 0;
 	unsigned int dfuse_address = 0; /* FIXME allow address to be zero? */
 
-	host_page_size = getpagesize();
 	memset(dif, 0, sizeof(*dif));
 	file.name = NULL;
 
@@ -1090,11 +1088,18 @@ status_again:
 		printf("Warning: Trying default transfer size %i\n",
 			transfer_size);
 	}
+
+#ifdef HAVE_GETPAGESIZE
+/* autotools lie when cross-compiling for Windows using mingw32/64 */
+#ifndef __MINGW32__
 	/* limitation of Linux usbdevio */
-	if (transfer_size > host_page_size) {
-		transfer_size = host_page_size;
+	if (transfer_size > getpagesize()) {
+		transfer_size = getpagesize();
 		printf("Limited transfer size to %i\n", transfer_size);
 	}
+#endif /* __MINGW32__ */
+#endif /* HAVE_GETPAGESIZE */
+
 	/* DFU specification */
 	struct libusb_device_descriptor desc;
 	if (libusb_get_device_descriptor(dif->dev, &desc)) {
