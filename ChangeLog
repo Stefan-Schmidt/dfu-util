@@ -1,3 +1,24 @@
+0.6:
+	o Add detach mode (Stefan Schmidt)
+	o Check return value on all libusb calls (Tormod Volden)
+	o Fix segmentation fault with -s option (Tormod Volden)
+	o Add DFU suffix manipulation tool (Stefan Schmidt)
+	o Port to Windows: (Tormod Volden, some parts based on work from Satz
+	  Klauer)
+	  o Port file handling to stdio streams
+	  o Sleep() macros
+	  o C99 types
+	  o Pack structs
+	o Detect DfuSe device correctly on big-endian architectures (Tormod
+	  Volden)
+	o Add dfuse progress indication on download (Tormod Volden)
+	o Cleanup: gcc pedantic, gcc extension, ... (Tormod Volden)
+	o Rely on page size from functional descriptor. Please report if you get
+	  an error about it.  (Tormod Volden)
+	o Add quirk for Maple since it reports wrong DFU version (Tormod Volden)
+
+2012-04-22: Stefan Schmidt <stefan@datenfreihafen.org>
+
 0.5:
 	o DfuSe extension support for ST devices (Tormod Volden)
 	o Add initial support for bitWillDetach flag from DFU 1.1 (Tormod
