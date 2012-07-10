@@ -20,8 +20,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <getopt.h>
+#include <string.h>
 
 #include "dfu_file.h"
+#include "lmdfu.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -36,6 +38,13 @@ enum mode {
 	MODE_CHECK
 };
 
+enum lmdfu_mode {
+	LMDFU_NONE,
+	LMDFU_ADD,
+	LMDFU_DEL,
+	LMDFU_CHECK
+};
+
 static void help(void)
 {
 	printf("Usage: dfu-suffix [options] <file>\n"
@@ -47,6 +56,11 @@ static void help(void)
 		"  -d --did\tAdd device ID into DFU suffix in <file>\n"
 		"  -c --check\tCheck DFU suffix of <file>\n"
 		"  -a --add\tAdd DFU suffix to <file>\n"
+		);
+	printf( "  -s --stellaris-address <address>  Add TI Stellaris address "
+		"prefix to <file>,\n\t\tto be used together with -a\n"
+		"  -T --stellaris  Act on TI Stellaris extension prefix of "
+		"<file>, to be used\n\t\tin combination with -D or -c\n"
 		);
 }
 
@@ -67,6 +81,8 @@ static struct option opts[] = {
 	{ "did", 1, 0, 'd' },
 	{ "check", 1, 0, 'c' },
 	{ "add", 1, 0, 'a' },
+	{ "stellaris-address", 1, 0, 's' },
+	{ "stellaris", 0, 0, 'T' },
 };
 
 static int check_suffix(struct dfu_file *file) {
@@ -86,13 +102,13 @@ static int check_suffix(struct dfu_file *file) {
 	return ret;
 }
 
-static void remove_suffix(struct dfu_file *file)
+static int remove_suffix(struct dfu_file *file)
 {
 	int ret;
 
 	ret = parse_dfu_suffix(file);
 	if (ret <= 0)
-		exit(1);
+		return 0;
 
 #ifdef HAVE_FTRUNCATE
 	/* There is no easy way to truncate to a size with stdio */
@@ -106,16 +122,11 @@ static void remove_suffix(struct dfu_file *file)
 #else
 	printf("Suffix removal not implemented on this platform\n");
 #endif /* HAVE_FTRUNCATE */
+	return 1;
 }
 
 static void add_suffix(struct dfu_file *file, int pid, int vid, int did) {
 	int ret;
-
-	ret = check_suffix(file);
-	if (ret > 0) {
-		printf("Please remove existing DFU suffix before adding a new one.\n");
-		exit(1);
-	}
 
 	file->idProduct = pid;
 	file->idVendor = vid;
@@ -134,6 +145,10 @@ int main(int argc, char **argv)
 	struct dfu_file file;
 	int pid, vid, did;
 	enum mode mode = MODE_NONE;
+	enum lmdfu_mode lmdfu_mode = LMDFU_NONE;
+	unsigned int lmdfu_flash_address=0;
+	int lmdfu_prefix=0;
+	char *end;
 
 	print_version();
 
@@ -142,7 +157,7 @@ int main(int argc, char **argv)
 
 	while (1) {
 		int c, option_index = 0;
-		c = getopt_long(argc, argv, "hVD:p:v:d:c:a:", opts,
+		c = getopt_long(argc, argv, "hVD:p:v:d:c:a:s:T", opts,
 				&option_index);
 		if (c == -1)
 			break;
@@ -176,11 +191,26 @@ int main(int argc, char **argv)
 			file.name = optarg;
 			mode = MODE_ADD;
 			break;
+		case 's':
+			lmdfu_mode = LMDFU_ADD;
+			lmdfu_flash_address = strtoul(optarg, &end, 0);
+			if (*end) {
+				fprintf(stderr, "Error: Invalid lmdfu "
+					"address: %s\n", optarg);
+				exit(2);
+			}
+			break;
+		case 'T':
+			lmdfu_mode = LMDFU_CHECK; /* or LMDFU_DEL */
+			break;
 		default:
 			help();
 			exit(2);
 		}
 	}
+
+	if(mode == MODE_DEL && lmdfu_mode == LMDFU_CHECK)
+		lmdfu_mode = LMDFU_DEL;
 
 	if (!file.name) {
 		fprintf(stderr, "You need to specify a filename\n");
@@ -198,18 +228,46 @@ int main(int argc, char **argv)
 
 	switch(mode) {
 	case MODE_ADD:
+		if (check_suffix(&file)) {
+			if(lmdfu_prefix) lmdfu_check_prefix(&file);
+			printf("Please remove existing DFU suffix before adding a new one.\n");
+			exit(1);
+		}
+		if(lmdfu_mode == LMDFU_ADD) {
+			if(lmdfu_check_prefix(&file)) {
+				fprintf(stderr, "Adding new anyway\n");
+			}
+			lmdfu_add_prefix(file, lmdfu_flash_address);
+		}
 		add_suffix(&file, pid, vid, did);
 		break;
 	case MODE_CHECK:
 		/* FIXME: could open read-only here */
 		check_suffix(&file);
+		if(lmdfu_mode == LMDFU_CHECK)
+			lmdfu_check_prefix(&file);
 		break;
 	case MODE_DEL:
-		remove_suffix(&file);
+		if(!remove_suffix(&file)) {
+			if(lmdfu_mode == LMDFU_DEL)
+				if (lmdfu_check_prefix(&file))
+					lmdfu_remove_prefix(&file);
+			exit(1);
+		}
 		break;
 	default:
 		help();
 		exit(2);
+	}
+
+	if(lmdfu_mode == LMDFU_DEL) {
+		if (check_suffix(&file)) {
+			fprintf(stderr, "DFU suffix exist. Remove suffix before using -T or use it with -D to delete suffix\n");
+			exit(1);
+		} else {
+			if(lmdfu_check_prefix(&file))
+				lmdfu_remove_prefix(&file);
+		}
 	}
 
 	fclose(file.filep);
