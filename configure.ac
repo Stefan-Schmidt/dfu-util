@@ -16,7 +16,7 @@ AM_MAINTAINER_MODE
 AC_PROG_CC
 
 # Checks for libraries.
-PKG_CHECK_MODULES(USB, libusb-1.0 >= 1.0.0,,
+PKG_CHECK_MODULES([USB], libusb-1.0 >= 1.0.0,,
                  AC_MSG_ERROR([*** Required libusb-1.0 >= 1.0.0 not installed ***]))
 AC_CHECK_LIB([usbpath],[usb_path2devnum],,,-lusb)
 
