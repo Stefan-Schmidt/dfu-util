@@ -15,8 +15,4 @@
 # error "Can't get no sleep! Please report"
 #endif /* HAVE_USLEEP */
 
-#ifndef __FUNCTION__
-# define __FUNCTION__ "unknown"
-#endif
-
 #endif /* PORTABLE_H */
