@@ -14,6 +14,7 @@ m4/
 src/.deps/
 src/Makefile
 src/Makefile.in
+src/dfu-suffix
 src/dfu-util
 src/dfu-version.h
 stamp-h1
