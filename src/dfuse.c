@@ -566,6 +566,8 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 		    unsigned int address)
 {
+	int ret;
+
 	mem_layout = parse_memory_layout((char *)dif->alt_name);
 	if (!mem_layout) {
 		fprintf(stderr, "Error: Failed to parse memory layout\n");
@@ -577,7 +579,7 @@ int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 				"meant for raw download\n");
 			return -EINVAL;
 		}
-		return dfuse_do_bin_dnload(dif, xfer_size, file, address);
+		ret = dfuse_do_bin_dnload(dif, xfer_size, file, address);
 	} else {
 		if (file.bcdDFU != 0x11a) {
 			fprintf(stderr, "Error: Only DfuSe file version 1.1a "
@@ -586,7 +588,8 @@ int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 				"--dfuse-address option)\n");
 			return -EINVAL;
 		}
-		return dfuse_do_dfuse_dnload(dif, xfer_size, file);
+		ret = dfuse_do_dfuse_dnload(dif, xfer_size, file);
 	}
 	free_segment_list(mem_layout);
+	return ret;
 }
