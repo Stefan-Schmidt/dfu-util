@@ -608,8 +608,8 @@ int main(int argc, char **argv)
 	char *end;
 	int final_reset = 0;
 	int ret;
-	int dfuse = 0;
-	unsigned int dfuse_address = 0; /* FIXME allow address to be zero? */
+	int dfuse_device = 0;
+	const char *dfuse_options = NULL;
 
 	memset(dif, 0, sizeof(*dif));
 	file.name = NULL;
@@ -688,15 +688,7 @@ int main(int argc, char **argv)
 			final_reset = 1;
 			break;
 		case 's':
-			dfuse = 1;
-			if (strcmp(optarg, "default")) {
-			    dfuse_address = strtoul(optarg, &end, 0);
-			    if (!dfuse_address || (*end)) {
-				fprintf(stderr, "Error: Invalid dfuse address: "
-					"%s\n", optarg);
-				exit(2);
-			    }
-			}
+			dfuse_options = optarg;
 			break;
 		default:
 			help();
@@ -1063,7 +1055,7 @@ status_again:
 	       libusb_le16_to_cpu(func_dfu.bcdDFUVersion));
 
 	if (func_dfu.bcdDFUVersion == libusb_cpu_to_le16(0x11a))
-		dfuse = 1;
+		dfuse_device = 1;
 
 	/* If not overridden by the user */
 	if (!transfer_size) {
@@ -1112,9 +1104,9 @@ status_again:
 			fclose(file.filep);
 			exit(1);
 		}
-		if (dfuse) {
+		if (dfuse_device || dfuse_options) {
 		    if (dfuse_do_upload(dif, transfer_size, file,
-					dfuse_address) < 0)
+					dfuse_options) < 0)
 			exit(1);
 		} else {
 		    if (dfuload_do_upload(dif, transfer_size, file) < 0)
@@ -1148,9 +1140,9 @@ status_again:
 			fprintf(stderr, "Warning: File product ID %04x does "
 				"not match device %04x\n", file.idProduct, dif->product);
 		}
-		if (dfuse || file.bcdDFU == 0x11a) {
+		if (dfuse_device || dfuse_options || file.bcdDFU == 0x11a) {
 		        if (dfuse_do_dnload(dif, transfer_size, file,
-							dfuse_address) < 0)
+							dfuse_options) < 0)
 				exit(1);
 		} else {
 			if (dfuload_do_dnload(dif, transfer_size, file) < 0)

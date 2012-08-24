@@ -2,7 +2,7 @@
  * as per the DfuSe 1.1a specification (ST documents AN3156, AN2606)
  * The DfuSe file format is described in ST document UM0391.
  *
- * (C) 2010-2011 Tormod Volden <debian.tormod@gmail.com>
+ * (C) 2010-2012 Tormod Volden <debian.tormod@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,10 +36,49 @@
 extern int verbose;
 static unsigned int last_erased = 0;
 static struct memsegment *mem_layout;
+static unsigned int dfuse_address = 0;
 
 unsigned int quad2uint(unsigned char *p)
 {
 	return (*p + (*(p + 1) << 8) + (*(p + 2) << 16) + (*(p + 3) << 24));
+}
+
+void dfuse_parse_options(const char *options)
+{
+	char *end;
+	const char *endword;
+	unsigned int number;
+
+	/* address, possibly empty, must be first */
+	if (*options != ':') {
+		endword = strchr(options, ':');
+		if (!endword)
+			endword = options + strlen(options); /* GNU strchrnul */
+
+		number = strtoul(options, &end, 0);
+		if (end == endword) {
+			dfuse_address = number;
+		} else {
+			fprintf(stderr, "Error: Invalid dfuse address: "
+				"%s\n", options);
+			exit(2);
+		}
+		options = endword;
+	}
+
+	while (*options) {
+		if (*options == ':') {
+			options++;
+			continue;
+		}
+		endword = strchr(options, ':');
+		if (!endword)
+			endword = options + strlen(options);
+
+		/* various modifiers goes here */
+
+		options = endword;
+	}
 }
 
 /* DFU_UPLOAD request for DfuSe 1.1a */
@@ -182,7 +221,7 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 }
 
 int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
-		    unsigned int dfuse_address)
+		    const char *dfuse_options)
 {
 	int total_bytes = 0;
 	int upload_limit = 0;
@@ -194,6 +233,8 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 	if (!buf)
 		return -ENOMEM;
 
+	if (dfuse_options)
+		dfuse_parse_options(dfuse_options);
 	if (dfuse_address) {
 		struct memsegment *segment;
 
@@ -564,22 +605,24 @@ int dfuse_do_dfuse_dnload(struct dfu_if *dif, int xfer_size,
 }
 
 int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
-		    unsigned int address)
+		    const char *dfuse_options)
 {
 	int ret;
 
+	if (dfuse_options)
+		dfuse_parse_options(dfuse_options);
 	mem_layout = parse_memory_layout((char *)dif->alt_name);
 	if (!mem_layout) {
 		fprintf(stderr, "Error: Failed to parse memory layout\n");
 		exit(1);
 	}
-	if (address) {
+	if (dfuse_address) {
 		if (file.bcdDFU == 0x11a) {
 			fprintf(stderr, "Error: This is a DfuSe file, not "
 				"meant for raw download\n");
 			return -EINVAL;
 		}
-		ret = dfuse_do_bin_dnload(dif, xfer_size, file, address);
+		ret = dfuse_do_bin_dnload(dif, xfer_size, file, dfuse_address);
 	} else {
 		if (file.bcdDFU != 0x11a) {
 			fprintf(stderr, "Error: Only DfuSe file version 1.1a "

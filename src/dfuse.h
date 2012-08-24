@@ -1,7 +1,7 @@
 /* This implements the ST Microsystems DFU extensions (DfuSe)
  * as per the DfuSe 1.1a specification (Document UM0391)
  *
- * (C) 2010-2011 Tormod Volden <debian.tormod@gmail.com>
+ * (C) 2010-2012 Tormod Volden <debian.tormod@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,8 @@ enum dfuse_command { SET_ADDRESS, ERASE_PAGE, MASS_ERASE };
 int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 			  enum dfuse_command command);
 int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
-		    unsigned int address);
+		    const char *dfuse_options);
 int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
-		    unsigned int address);
+		    const char *dfuse_options);
 
 #endif /* DFUSE_H */
