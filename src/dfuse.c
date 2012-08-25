@@ -38,6 +38,7 @@ static unsigned int last_erased = 0;
 static struct memsegment *mem_layout;
 static unsigned int dfuse_address = 0;
 static unsigned int dfuse_length = 0;
+static int dfuse_force = 0;
 
 unsigned int quad2uint(unsigned char *p)
 {
@@ -76,7 +77,11 @@ void dfuse_parse_options(const char *options)
 		if (!endword)
 			endword = options + strlen(options);
 
-		/* various modifiers goes here */
+		if (!strncmp(options, "force", endword - options)) {
+			dfuse_force++;
+			options += 5;
+			continue;
+		}
 
 		/* any valid number is interpreted as upload length */
 		number = strtoul(options, &end, 0);
@@ -257,7 +262,8 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 			exit(1);
 		}
 		segment = find_segment(mem_layout, dfuse_address);
-		if (!segment || !(segment->memtype & DFUSE_READABLE)) {
+		if (!dfuse_force &&
+		    (!segment || !(segment->memtype & DFUSE_READABLE))) {
 			fprintf(stderr,
 				"Error: Page at 0x%08x is not readable\n",
 				dfuse_address);
