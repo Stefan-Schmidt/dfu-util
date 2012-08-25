@@ -37,6 +37,7 @@ extern int verbose;
 static unsigned int last_erased = 0;
 static struct memsegment *mem_layout;
 static unsigned int dfuse_address = 0;
+static unsigned int dfuse_length = 0;
 
 unsigned int quad2uint(unsigned char *p)
 {
@@ -77,6 +78,15 @@ void dfuse_parse_options(const char *options)
 
 		/* various modifiers goes here */
 
+		/* any valid number is interpreted as upload length */
+		number = strtoul(options, &end, 0);
+		if (end == endword) {
+			dfuse_length = number;
+		} else {
+			fprintf(stderr, "Error: Invalid dfuse modifier: "
+				"%s\n", options);
+			exit(2);
+		}
 		options = endword;
 	}
 }
@@ -235,6 +245,8 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 
 	if (dfuse_options)
 		dfuse_parse_options(dfuse_options);
+	if (dfuse_length)
+		upload_limit = dfuse_length;
 	if (dfuse_address) {
 		struct memsegment *segment;
 
@@ -251,12 +263,17 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 				dfuse_address);
 			exit(1);
 		}
-		upload_limit = segment->end - dfuse_address + 1;
-		printf("Limiting upload to end of memory segment, %i bytes\n",
-		       upload_limit);
+		if (!upload_limit) {
+			upload_limit = segment->end - dfuse_address + 1;
+			printf("Limiting upload to end of memory segment, "
+			       "%i bytes\n", upload_limit);
+		}
 		dfuse_special_command(dif, dfuse_address, SET_ADDRESS);
 	} else {
-		upload_limit = 0x4000;	/* Should be safe for most devices */
+		/* Boot loader decides the start address, unknown to us */
+		/* Use a short length to lower risk of running out of bounds */
+		if (!upload_limit)
+			upload_limit = 0x4000;
 		printf("Limiting default upload to %i bytes\n", upload_limit);
 	}
 
