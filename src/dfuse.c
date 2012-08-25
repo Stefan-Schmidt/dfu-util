@@ -285,6 +285,9 @@ int dfuse_do_upload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 	while (1) {
 		int rc, write_rc;
 
+		/* last chunk can be smaller than original xfer_size */
+		if (upload_limit - total_bytes < xfer_size)
+			xfer_size = upload_limit - total_bytes;
 		rc = dfuse_upload(dif, xfer_size, buf, transaction++);
 		if (rc < 0) {
 			ret = rc;
