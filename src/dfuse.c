@@ -39,6 +39,7 @@ static struct memsegment *mem_layout;
 static unsigned int dfuse_address = 0;
 static unsigned int dfuse_length = 0;
 static int dfuse_force = 0;
+static int dfuse_leave = 0;
 
 unsigned int quad2uint(unsigned char *p)
 {
@@ -79,6 +80,11 @@ void dfuse_parse_options(const char *options)
 
 		if (!strncmp(options, "force", endword - options)) {
 			dfuse_force++;
+			options += 5;
+			continue;
+		}
+		if (!strncmp(options, "leave", endword - options)) {
+			dfuse_leave = 1;
 			options += 5;
 			continue;
 		}
@@ -347,7 +353,11 @@ int dfuse_dnload_chunk(struct dfu_if *dif, unsigned char *data, int size,
 		}
 		milli_sleep(dst.bwPollTimeout);
 	} while (dst.bState != DFU_STATE_dfuDNLOAD_IDLE &&
-		 dst.bState != DFU_STATE_dfuERROR);
+		 dst.bState != DFU_STATE_dfuERROR &&
+		 dst.bState != DFU_STATE_dfuMANIFEST);
+
+	if (dst.bState == DFU_STATE_dfuMANIFEST)
+			printf("Transitioning to dfuMANIFEST state\n");
 
 	if (dst.bStatus != DFU_STATUS_OK) {
 		printf(" failed!\n");
@@ -660,5 +670,18 @@ int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 		ret = dfuse_do_dfuse_dnload(dif, xfer_size, file);
 	}
 	free_segment_list(mem_layout);
+
+	if (dfuse_leave) {
+		int ret2;
+		struct dfu_status dst;
+
+		dfuse_dnload_chunk(dif, NULL, 0, 2); /* Zero-size */
+		ret2 = dfu_get_status(dif->dev_handle, dif->interface, &dst);
+		if (ret2 < 0)
+			fprintf(stderr, "Error during download get_status\n");
+		if (verbose)
+			printf("bState = %i and bStatus = %i\n",
+			       dst.bState, dst.bStatus);
+	}
 	return ret;
 }
