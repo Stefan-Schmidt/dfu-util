@@ -40,6 +40,7 @@ static unsigned int dfuse_address = 0;
 static unsigned int dfuse_length = 0;
 static int dfuse_force = 0;
 static int dfuse_leave = 0;
+static int dfuse_unprotect = 0;
 
 unsigned int quad2uint(unsigned char *p)
 {
@@ -86,6 +87,11 @@ void dfuse_parse_options(const char *options)
 		if (!strncmp(options, "leave", endword - options)) {
 			dfuse_leave = 1;
 			options += 5;
+			continue;
+		}
+		if (!strncmp(options, "unprotect", endword - options)) {
+			dfuse_unprotect = 1;
+			options += 9;
 			continue;
 		}
 
@@ -185,6 +191,9 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 	} else if (command == MASS_ERASE) {
 		buf[0] = 0x41;	/* Mass erase command when length = 1 */
 		length = 1;
+	} else if (command == READ_UNPROTECT) {
+		buf[0] = 0x92;
+		length = 1;
 	} else {
 		fprintf(stderr, "Error: Non-supported special command %d\n",
 			command);
@@ -211,6 +220,9 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 	}
 	/* wait while command is executed */
 	milli_sleep(dst.bwPollTimeout);
+
+	if (command == READ_UNPROTECT)
+		return ret;
 
 	ret = dfu_get_status(dif->dev_handle, dif->interface, &dst);
 	if (ret < 0) {
@@ -651,6 +663,17 @@ int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 	if (!mem_layout) {
 		fprintf(stderr, "Error: Failed to parse memory layout\n");
 		exit(1);
+	}
+	if (dfuse_unprotect) {
+		if (!dfuse_force) {
+			fprintf(stderr, "Error: The read unprotect command "
+				"will erase the flash memory\n"
+				"and can only be used with force\n");
+			exit(1);
+		}
+		dfuse_special_command(dif, 0, READ_UNPROTECT);
+		printf("Device disconnects, erases flash and resets now\n");
+		exit(0);
 	}
 	if (dfuse_address) {
 		if (file.bcdDFU == 0x11a) {
