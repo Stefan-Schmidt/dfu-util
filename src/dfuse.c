@@ -426,7 +426,7 @@ int dfuse_dnload_element(struct dfu_if *dif, unsigned int dwElementAddress,
 			chunk_size = dwElementSize - p;
 
 		/* Erase only for flash memory downloads */
-		if (segment->memtype & DFUSE_ERASABLE) {
+		if ((segment->memtype & DFUSE_ERASABLE) && !dfuse_mass_erase) {
 			/* erase all involved pages */
 			for (erase_address = address;
 			     erase_address < address + chunk_size;
