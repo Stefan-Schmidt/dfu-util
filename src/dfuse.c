@@ -41,6 +41,7 @@ static unsigned int dfuse_length = 0;
 static int dfuse_force = 0;
 static int dfuse_leave = 0;
 static int dfuse_unprotect = 0;
+static int dfuse_mass_erase = 0;
 
 unsigned int quad2uint(unsigned char *p)
 {
@@ -92,6 +93,11 @@ void dfuse_parse_options(const char *options)
 		if (!strncmp(options, "unprotect", endword - options)) {
 			dfuse_unprotect = 1;
 			options += 9;
+			continue;
+		}
+		if (!strncmp(options, "mass-erase", endword - options)) {
+			dfuse_mass_erase = 1;
+			options += 10;
 			continue;
 		}
 
@@ -674,6 +680,15 @@ int dfuse_do_dnload(struct dfu_if *dif, int xfer_size, struct dfu_file file,
 		dfuse_special_command(dif, 0, READ_UNPROTECT);
 		printf("Device disconnects, erases flash and resets now\n");
 		exit(0);
+	}
+	if (dfuse_mass_erase) {
+		if (!dfuse_force) {
+			fprintf(stderr, "Error: The mass erase command "
+				"can only be used with force\n");
+			exit(1);
+		}
+		printf("Performing mass erase, this can take a moment\n");
+		dfuse_special_command(dif, 0, MASS_ERASE);
 	}
 	if (dfuse_address) {
 		if (file.bcdDFU == 0x11a) {
