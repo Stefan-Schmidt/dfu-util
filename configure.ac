@@ -16,8 +16,12 @@ AM_MAINTAINER_MODE
 AC_PROG_CC
 
 # Checks for libraries.
-PKG_CHECK_MODULES([USB], libusb-1.0 >= 1.0.0,,
-                 AC_MSG_ERROR([*** Required libusb-1.0 >= 1.0.0 not installed ***]))
+# On FreeBSD the libusb-1.0 is called libusb and resides in system location
+AC_CHECK_LIB([usb], [libusb_init],, [native_libusb=no],)
+AS_IF([test x$native_libusb = xno], [
+    PKG_CHECK_MODULES([USB], [libusb-1.0 >= 1.0.0],,
+        AC_MSG_ERROR([*** Required libusb-1.0 >= 1.0.0 not installed ***]))
+])
 AC_CHECK_LIB([usbpath],[usb_path2devnum],,,-lusb)
 
 LIBS="$LIBS $USB_LIBS"
