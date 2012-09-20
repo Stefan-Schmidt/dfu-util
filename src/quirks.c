@@ -31,6 +31,7 @@ void set_quirks(uint16_t vendor, uint16_t product, uint16_t bcdDevice)
 
 	/* Reports wrong DFU version in DFU descriptor */
 	if (vendor == VENDOR_LEAFLABS &&
-	    product == PRODUCT_MAPLE3 )
+	    product == PRODUCT_MAPLE3 &&
+	    bcdDevice == 0x0200)
 		quirks |= QUIRK_FORCE_DFU11;
 }
