@@ -16,11 +16,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <stdint.h>
 #include "quirks.h"
 
 int quirks = 0;
 
-void set_quirks(unsigned long vendor, unsigned long product)
+void set_quirks(uint16_t vendor, uint16_t product, uint16_t bcdDevice)
 {
 	/* Device returns bogus bwPollTimeout values */
 	if (vendor == VENDOR_OPENMOKO ||

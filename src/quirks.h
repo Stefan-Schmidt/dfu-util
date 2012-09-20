@@ -15,6 +15,6 @@
 
 extern int quirks;
 
-void set_quirks(unsigned long vendor, unsigned long product);
+void set_quirks(uint16_t vendor, uint16_t product, uint16_t bcdDevice);
 
 #endif /* DFU_QUIRKS_H */

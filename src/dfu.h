@@ -93,6 +93,7 @@ struct dfu_status {
 struct dfu_if {
     uint16_t vendor;
     uint16_t product;
+    uint16_t bcdDevice;
     uint8_t configuration;
     uint8_t interface;
     uint8_t altsetting;

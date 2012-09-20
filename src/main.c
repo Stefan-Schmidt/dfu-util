@@ -89,10 +89,9 @@ static int find_dfu_if(libusb_device *dev,
 				if (intf->bInterfaceClass == 0xfe &&
 				    intf->bInterfaceSubClass == 1) {
 					dfu_if->dev = dev;
-					dfu_if->vendor =
-						desc.idVendor;
-					dfu_if->product =
-						desc.idProduct;
+					dfu_if->vendor = desc.idVendor;
+					dfu_if->product = desc.idProduct;
+					dfu_if->bcdDevice = desc.bcdDevice;
 					dfu_if->configuration = cfg->
 							bConfigurationValue;
 					dfu_if->interface =
@@ -769,7 +768,7 @@ int main(int argc, char **argv)
 	printf("ID %04x:%04x\n", _rt_dif.vendor, _rt_dif.product);
 
 	/* find set of quirks for this device */
-	set_quirks(_rt_dif.vendor, _rt_dif.product);
+	set_quirks(_rt_dif.vendor, _rt_dif.product, _rt_dif.bcdDevice);
 
 	/* Obtain run-time DFU functional descriptor without asking device
 	 * E.g. Freerunner does not like to be requested at this point */
