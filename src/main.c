@@ -553,10 +553,11 @@ static void help(void)
 
 static void print_version(void)
 {
-	printf("dfu-util %s\n\n", VERSION);
+	printf(PACKAGE_STRING "\n\n");
 	printf("Copyright 2005-2008 Weston Schmidt, Harald Welte and OpenMoko Inc.\n"
 	       "Copyright 2010-2012 Tormod Volden and Stefan Schmidt\n"
-	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
+	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n"
+	       "Please report bugs to " PACKAGE_BUGREPORT "\n\n");
 }
 
 static struct option opts[] = {

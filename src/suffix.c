@@ -66,9 +66,10 @@ static void help(void)
 
 static void print_version(void)
 {
-	printf("dfu-suffix %s\n\n", VERSION);
+	printf("dfu-suffix (" PACKAGE ") " PACKAGE_VERSION "\n\n");
 	printf("(C) 2011-2012 Stefan Schmidt\n"
-	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n\n");
+	       "This program is Free Software and has ABSOLUTELY NO WARRANTY\n"
+	       "Please report bugs to " PACKAGE_BUGREPORT "\n\n");
 
 }
 
