@@ -1,3 +1,12 @@
+0.7 (unreleased):
+	o Support for TI Stellaris devices (Tommi Keisala)
+	o Fix libusb detection on MacOSX (Marc Singer)
+	o Fix libusb detection on FreeBSD (Tormod Volden)
+	o Improved DfuSe support (Tormod Volden)
+	  o Support all special commands (leave, unprotect, mass-erase)
+	  o Arbitrary upload lengths
+	  o "force" option for various possible (dangerous) overrides
+
 0.6:
 	o Add detach mode (Stefan Schmidt)
 	o Check return value on all libusb calls (Tormod Volden)
