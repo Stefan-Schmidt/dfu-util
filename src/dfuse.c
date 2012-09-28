@@ -225,6 +225,8 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 		exit(1);
 	}
 	/* wait while command is executed */
+	if (verbose)
+		printf("   Poll timeout %i ms\n", dst.bwPollTimeout);
 	milli_sleep(dst.bwPollTimeout);
 
 	if (command == READ_UNPROTECT)
@@ -233,6 +235,9 @@ int dfuse_special_command(struct dfu_if *dif, unsigned int address,
 	ret = dfu_get_status(dif->dev_handle, dif->interface, &dst);
 	if (ret < 0) {
 		fprintf(stderr, "Error during second get_status\n");
+		printf("state(%u) = %s, status(%u) = %s\n", dst.bState,
+		       dfu_state_to_string(dst.bState), dst.bStatus,
+		       dfu_status_to_string(dst.bStatus));
 		exit(1);
 	}
 	if (dst.bStatus != DFU_STATUS_OK) {
